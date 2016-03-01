@@ -8,7 +8,7 @@ local math = require 'math'
 local function cloneTable(tbl)
     local clone = {}
     for k, v in pairs(tbl) do
-	clone[k] = v
+        clone[k] = v
     end
     return clone
 end
@@ -46,19 +46,19 @@ local function fillOptions(opts)
 
     local newOpts
     if not opts then
-	newOpts = {}
+        newOpts = {}
     else
-	newOpts = cloneTable(opts)
+        newOpts = cloneTable(opts)
     end
     
     if not newOpts.pen_color then
-	newOpts.pen_color = luamp.colors.default
+        newOpts.pen_color = luamp.colors.default
     end
     if not newOpts.brush_color then
-	newOpts.brush_color = luamp.colors.invisible
+        newOpts.brush_color = luamp.colors.invisible
     end
     if not newOpts.line_style then
-	newOpts.line_style = luamp.line_styles.solid
+        newOpts.line_style = luamp.line_styles.solid
     end
 
     return newOpts
@@ -230,7 +230,7 @@ local DefaultColor = {
         return 'default'
     end,
     __draw__ = function(c)
-	return ''
+        return ''
     end,
 }
 
@@ -245,7 +245,7 @@ local Invisible = {
         return 'invisible'
     end,
     __draw__ = function(c)
-	return nil
+        return nil
     end,
 }
 
@@ -258,31 +258,40 @@ local Color = {
     end,
     __tostring = function(c)
         return string.format(
-	    '(Color r=$.2f g=%.2f b=%.2f)',
-	    c.r, c.g, c.b)
+            '(Color r=$.2f g=%.2f b=%.2f)',
+            c.red, c.green, c.blue)
     end,
     __draw__ = function(c)
-	return string.format(
-	    ' withcolor (%.2f,%.2f,%.2f)',
-	    c.r, c.g, c.b)
+        return string.format(
+            ' withcolor (%.2f,%.2f,%.2f)',
+            c.red, c.green, c.blue)
     end,
 }
+
+function luamp.color(red, green, blue)
+    local res = {
+        red = red,
+        green = green,
+        blue = blue,
+    }
+    return setmetatable(res, Color)
+end
 
 luamp.colors = {
     default = setmetatable({}, DefaultColor),
     invisible = setmetatable({}, Invisible),
-    black = setmetatable({r=0,g=0,b=0}, Color),
-    white = setmetatable({r=1,g=1,b=1}, Color),
-    red = setmetatable({r=1,g=0,b=0}, Color),
-    green = setmetatable({r=0,g=1,b=0}, Color),
-    blue = setmetatable({r=0,g=0,b=1}, Color),
-    yellow = setmetatable({r=1,g=1,b=0}, Color),
-    purple = setmetatable({r=1,g=0,b=1}, Color),
-    brown = setmetatable({r=0.5,g=0.5,b=0}, Color),
-    magenta = setmetatable({r=0.5,g=0,b=0.5}, Color),
-    cyan = setmetatable({r=0,g=0.5,b=0.5}, Color),
-    gray = setmetatable({r=0.5,g=0.5,b=0.5}, Color),
-    orange = setmetatable({r=1,g=0.5,b=0}, Color),
+    black = luamp.color(0,0,0),
+    white = luamp.color(1,1,1),
+    red = luamp.color(1,0,0),
+    green = luamp.color(0,1,0),
+    blue = luamp.color(0,0,1),
+    yellow = luamp.color(1,1,0),
+    purple = luamp.color(1,0,1),
+    brown = luamp.color(0.5,0.5,0),
+    magenta = luamp.color(0.5,0,0.5),
+    cyan = luamp.color(0,0.5,0.5),
+    gray = luamp.color(0.5,0.5,0.5),
+    orange = luamp.color(1,0.5,0),
 }
 
 -- line styles
@@ -298,7 +307,7 @@ local Solid = {
         return 'solid'
     end,
     __draw__ = function(s)
-	return ''
+        return ''
     end,
 }
 
@@ -313,7 +322,7 @@ local Dashed = {
         return 'dashed'
     end,
     __draw__ = function(s)
-	return ' dashed evenly'
+        return ' dashed evenly'
     end,
 }
 
@@ -328,7 +337,7 @@ local Dotted = {
         return 'dotted'
     end,
     __draw__ = function(s)
-	return ' dashed withdots'
+        return ' dashed withdots'
     end,
 }
 
@@ -351,26 +360,26 @@ local Circle = {
         return string.format('(Circle center=%s radius=%.2f)', tostring(c.center), c.radius)
     end,
     __draw__ = function(c)
-	local res = {}
-	local shape = ' fullcircle scaled %.2fcm shifted %s'
-	
-	local brush = luamp.draw(c.brush_color)
-	if brush then
-	    local format = 'fill' .. shape .. brush .. ';'
-	    table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
-	end
-	
-	local pen = luamp.draw(c.pen_color)
-	if pen then
-	    local format = 'draw' .. shape .. pen .. ';'
-	    table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
-	end
+        local res = {}
+        local shape = ' fullcircle scaled %.2fcm shifted %s'
+        
+        local brush = luamp.draw(c.brush_color)
+        if brush then
+            local format = 'fill' .. shape .. brush .. ';'
+            table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
+        end
+        
+        local pen = luamp.draw(c.pen_color)
+        if pen then
+            local format = 'draw' .. shape .. pen .. ';'
+            table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
+        end
 
-	if #res == 0 then
-	    return nil
-	else
-	    return table.concat(res, '\n')
-	end
+        if #res == 0 then
+            return nil
+        else
+            return table.concat(res, '\n')
+        end
     end,
     __intersect_line__ = function(circle, target)
         local c = circle.center
@@ -390,8 +399,8 @@ function luamp.circle(center, radius, opts)
     local res = {
         center = center,
         radius = radius,
-	pen_color = opts.pen_color,
-	brush_color = opts.brush_color,
+        pen_color = opts.pen_color,
+        brush_color = opts.brush_color,
     }
     return setmetatable(res, Circle)
 end
@@ -407,7 +416,7 @@ local Center = {
         return 'center'
     end,
     __draw__ = function(_)
-	return 'label'
+        return 'label'
     end,
 }
 
@@ -422,7 +431,7 @@ local Left = {
         return 'left'
     end,
     __draw__ = function(_)
-	return 'label.lft'
+        return 'label.lft'
     end,
 }
 
@@ -437,7 +446,7 @@ local Right = {
         return 'right'
     end,
     __draw__ = function(_)
-	return 'label.rt'
+        return 'label.rt'
     end,
 }
 
@@ -452,7 +461,7 @@ local Top = {
         return 'top'
     end,
     __draw__ = function(_)
-	return 'label.top'
+        return 'label.top'
     end,
 }
 
@@ -467,7 +476,7 @@ local Bottom = {
         return 'bottom'
     end,
     __draw__ = function(_)
-	return 'label.bot'
+        return 'label.bot'
     end,
 }
 
@@ -482,7 +491,7 @@ local TopRight = {
         return 'top-right'
     end,
     __draw__ = function(_)
-	return 'label.urt'
+        return 'label.urt'
     end,
 }
 
@@ -497,7 +506,7 @@ local TopLeft = {
         return 'top-left'
     end,
     __draw__ = function(_)
-	return 'label.ulft'
+        return 'label.ulft'
     end,
 }
 
@@ -512,7 +521,7 @@ local BottomLeft = {
         return 'bottom-left'
     end,
     __draw__ = function(_)
-	return 'label.llft'
+        return 'label.llft'
     end,
 }
 
@@ -527,7 +536,7 @@ local BottomRight = {
         return 'bottom-right'
     end,
     __draw__ = function(_)
-	return 'label.lrt'
+        return 'label.lrt'
     end,
 }
 
@@ -554,15 +563,15 @@ local Text = {
         return string.format('(Text direction=%s text=%s)', tostring(t.direction), t.text)
     end,
     __draw__ = function(t)
-	local pen_color = luamp.draw(t.pen_color)
-	if not pen_color then
-	    return nil
-	end
-	local command = luamp.draw(t.direction)
-	local format = command .. '(btex %s etex, %s)' .. pen_color .. ';'
-	return string.format(
-	    format,
-	    t.text, luamp.draw(t.center))
+        local pen_color = luamp.draw(t.pen_color)
+        if not pen_color then
+            return nil
+        end
+        local command = luamp.draw(t.direction)
+        local format = command .. '(btex %s etex, %s)' .. pen_color .. ';'
+        return string.format(
+            format,
+            t.text, luamp.draw(t.center))
     end,
 }
 
@@ -583,7 +592,7 @@ function luamp.text(center, direction, text, opts)
         center = center,
         direction = direction,
         text = text,
-	pen_color = opts.pen_color,
+        pen_color = opts.pen_color,
     }
     return setmetatable(res, Text)
 end
@@ -599,7 +608,7 @@ local NoArrow = {
         return 'no_arrow'
     end,
     __draw__ = function(_)
-	return 'draw'
+        return 'draw'
     end,
 }
 
@@ -614,7 +623,7 @@ local SingleArrow = {
         return 'single_arrow'
     end,
     __draw__ = function(_)
-	return 'drawarrow'
+        return 'drawarrow'
     end,
 }
 
@@ -629,7 +638,7 @@ local DoubleArrow = {
         return 'double_arrow'
     end,
     __draw__ = function(_)
-	return 'drawdblarrow'
+        return 'drawdblarrow'
     end,
 }
 
@@ -653,13 +662,13 @@ local Line = {
             tostring(l.to))
     end,
     __draw__ = function(l)
-	local pen_color = luamp.draw(l.pen_color)
-	if not pen_color then
-	    return nil
-	end
+        local pen_color = luamp.draw(l.pen_color)
+        if not pen_color then
+            return nil
+        end
         local line_style = luamp.draw(l.line_style)
-	local command = luamp.draw(l.arrow)
-	local format = command .. ' %s--%s' .. line_style .. pen_color .. ';'
+        local command = luamp.draw(l.arrow)
+        local format = command .. ' %s--%s' .. line_style .. pen_color .. ';'
         return string.format(
             format,
             luamp.draw(l.from),
@@ -675,11 +684,11 @@ local Line = {
 
 local function line_object(from, to, opts)
     local function line_point(s0, s1)
-	if getmetatable(s0) == Point then
-	    return s0
-	else
-	    return intersect_line(s0, luamp.center(s1))
-	end
+        if getmetatable(s0) == Point then
+            return s0
+        else
+            return intersect_line(s0, luamp.center(s1))
+        end
     end
 
     local opts = fillOptions(opts)
@@ -687,7 +696,7 @@ local function line_object(from, to, opts)
         from = line_point(from, to),
         to = line_point(to, from),
         line_style = opts.line_style,
-	pen_color = opts.pen_color,
+        pen_color = opts.pen_color,
     }
     return setmetatable(res, Line)
 end
@@ -723,34 +732,34 @@ local Rectangle = {
             r.half_height * 2)
     end,
     __draw__ = function(r)
-	local res = {}
-	local shape = ' %s--%s--%s--%s--cycle' .. luamp.draw(r.line_style)
+        local res = {}
+        local shape = ' %s--%s--%s--%s--cycle' .. luamp.draw(r.line_style)
 
-	local brush = luamp.draw(r.brush_color)
-	if brush then
-	    local format = 'fill' .. shape .. brush .. ';'
-	    table.insert(
-		res,
-		string.format(
-		    format,
-		    table.unpack(map(luamp.draw, luamp.vertices(r)))))
-	end
-	
-	local pen = luamp.draw(r.pen_color)
-	if pen then
-	    local format = 'draw' .. shape .. pen .. ';'
-	    table.insert(
-		res,
-		string.format(
-		    format,
-		    table.unpack(map(luamp.draw, luamp.vertices(r)))))
-	end
+        local brush = luamp.draw(r.brush_color)
+        if brush then
+            local format = 'fill' .. shape .. brush .. ';'
+            table.insert(
+                res,
+                string.format(
+                    format,
+                    table.unpack(map(luamp.draw, luamp.vertices(r)))))
+        end
+        
+        local pen = luamp.draw(r.pen_color)
+        if pen then
+            local format = 'draw' .. shape .. pen .. ';'
+            table.insert(
+                res,
+                string.format(
+                    format,
+                    table.unpack(map(luamp.draw, luamp.vertices(r)))))
+        end
 
-    	if #res == 0 then
-	    return nil
-	else
-	    return table.concat(res, '\n')
-	end
+        if #res == 0 then
+            return nil
+        else
+            return table.concat(res, '\n')
+        end
     end,
     __center__ = function(r)
         return r.center
@@ -798,8 +807,8 @@ function luamp.rectangle(center, length, height, opts)
         half_length = length / 2,
         half_height = height / 2,
         line_style = opts.line_style,
-	pen_color = opts.pen_color,
-	brush_color = opts.brush_color,
+        pen_color = opts.pen_color,
+        brush_color = opts.brush_color,
     }
     return setmetatable(res, Rectangle)
 end
@@ -825,15 +834,18 @@ local Bullet = {
         return string.format('(Bullet center=%s)', tostring(c.center))
     end,
     __draw__ = function(c)
-	return luamp.draw(
-	    luamp.circle(
-		c.center,
-		c.inner_radius,
-		{pen_color=luamp.colors.invisible,
-		 brush_color=c.brush_color}))
+        return luamp.draw(
+            luamp.circle(
+                c.center,
+                c.inner_radius,
+                {pen_color=luamp.colors.invisible,
+                 brush_color=c.brush_color}))
     end,
     __intersect_line__ = function(c, target)
-	return intersect_line(luamp.circle(c.center, c.border_radius), target)
+        return intersect_line(luamp.circle(c.center, c.border_radius), target)
+    end,
+    __center__ = function(c)
+        return c.center
     end,
 }
 
@@ -842,20 +854,20 @@ function luamp.bullet(center, opts)
     assert(opts == nil or type(opts) == 'table')
 
     if not opts then
-	opts = {}
+        opts = {}
     else
-	opts = cloneTable(opts)
+        opts = cloneTable(opts)
     end
     
     if not opts.brush_color then
-	opts.brush_color = luamp.colors.default
+        opts.brush_color = luamp.colors.default
     end
     
     local res = {
         center = center,
-	inner_radius = 0.1,
-	border_radius = 0.11,
-	brush_color = opts.brush_color,
+        inner_radius = 0.1,
+        border_radius = 0.11,
+        brush_color = opts.brush_color,
     }
     return setmetatable(res, Bullet)
 end
@@ -974,34 +986,75 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
     assert(type(rowSep) == 'number')
     assert(type(colSep) == 'number')
     assert(type(shapes) == 'table')
+    assert(#shapes > 0)
 
-    local lastX = 0
-    local function arrange(tree, y)
-        assert(#tree > 0)
-        local x = lastX
-        local positions = {}
-        local root = luamp.point(x, y)
-        table.insert(positions, root)
-        if #tree == 1 then
-            lastX = lastX + colSep
-        else
-           local minx, maxx
-           for i = 2, #tree do
-               local subtree = arrange(tree[i], y - rowSep)
-               table.insert(positions, subtree)
-               if i == 2 then
-                   minx = subtree[1].x
-               end
-               if i == #tree then
-                   maxx = subtree[1].x
-               end
-           end
-           x = (minx + maxx) / 2
-           root.x = x
-        end
-        return positions
+    local function downwards(tree, incx)
+	assert(#tree > 0)
+	tree[1].x = tree[1].x + incx
+	for i = 2, #tree do
+	    downwards(tree, incx)
+	end
     end
-    local positions = arrange(shapes, 0)
+
+    local lastX = {}
+    
+    local function upwards(tree, level)
+        assert(#tree > 0)
+
+	if #lastX < level then
+	    table.insert(lastX, -colSep)
+	end
+
+        local minx, maxx
+	local subtrees = {}
+        for i = 2, #tree do
+            local subtree = upwards(tree[i], level + 1)
+	    table.insert(subtrees, subtree)
+            if i == 2 then
+                minx = subtree[1].x
+            end
+            if i == #tree then
+                maxx = subtree[1].x
+            end
+        end
+        assert((minx == nil) == (#subtrees == 0),
+            string.format('minx=%s maxx=%s', tostring(minxx), tostring(#subtrees)))
+        assert((maxx == nil) == (#subtrees == 0),
+            string.format('minx=%s maxx=%s', tostring(minxx), tostring(#subtrees)))
+
+        local x
+        if #subtrees == 0 then
+	    x = 0
+	else
+	    x = (minx + maxx) / 2
+	end
+        
+	local xx = max(x, lastX[level] + colSep)
+	local incx = xx - x
+	x = xx
+	lastX[level] = x
+
+	if #subtrees > 0 then
+	    local sep = (maxx - minx) / (#subtrees - 1)
+	    for i = 1, #subtrees do
+		local realIncX = incx + minx + sep * (i - 1) - subtrees[i][1].x
+		if realIncX > 0 then
+		    downwards(subtrees[i], realIncX)
+		end
+	    end
+	end
+
+	local res = {}
+	table.insert(res, luamp.point(x, -rowSep * (level - 1)))
+	for i = 1, #subtrees do
+	    table.insert(res, subtrees[i])
+	end
+	return res
+    end
+    local function arrange(shapes)
+        return upwards(shapes, 1)
+    end
+    local positions = arrange(shapes)
 
     local function computeBottomRight(tree)
         assert(#tree > 0)

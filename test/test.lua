@@ -595,11 +595,11 @@ testLayouts.tree3 = testa.is(
              {circle}}))
     end,
     [[draw fullcircle scaled 0.02cm shifted (0.00cm,2.00cm);
-draw fullcircle scaled 0.02cm shifted (-3.00cm,0.00cm);
+draw fullcircle scaled 0.02cm shifted (-2.00cm,0.00cm);
 draw fullcircle scaled 0.02cm shifted (0.00cm,0.00cm);
 draw fullcircle scaled 0.02cm shifted (-1.00cm,-2.00cm);
 draw fullcircle scaled 0.02cm shifted (1.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (3.00cm,0.00cm);]])
+draw fullcircle scaled 0.02cm shifted (2.00cm,0.00cm);]])
 
 testLayouts.tree4 = testa.is(
     function()
@@ -617,15 +617,15 @@ testLayouts.tree4 = testa.is(
               {circle}}}))
     end,
     [[draw fullcircle scaled 0.02cm shifted (0.00cm,2.00cm);
-draw fullcircle scaled 0.02cm shifted (-4.00cm,0.00cm);
-draw fullcircle scaled 0.02cm shifted (-6.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (-4.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (-2.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (-3.00cm,0.00cm);
+draw fullcircle scaled 0.02cm shifted (-5.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (-3.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (-1.00cm,-2.00cm);
 draw fullcircle scaled 0.02cm shifted (0.00cm,0.00cm);
-draw fullcircle scaled 0.02cm shifted (4.00cm,0.00cm);
-draw fullcircle scaled 0.02cm shifted (2.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (4.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (6.00cm,-2.00cm);]])
+draw fullcircle scaled 0.02cm shifted (3.00cm,0.00cm);
+draw fullcircle scaled 0.02cm shifted (1.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (3.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (5.00cm,-2.00cm);]])
 
 testLayouts.tree5 = testa.is(
     function()
@@ -640,12 +640,12 @@ testLayouts.tree5 = testa.is(
               {circle}}}))
     end,
     [[draw fullcircle scaled 0.02cm shifted (-1.50cm,2.00cm);
-draw fullcircle scaled 0.02cm shifted (-4.00cm,0.00cm);
-draw fullcircle scaled 0.02cm shifted (1.00cm,0.00cm);
-draw fullcircle scaled 0.02cm shifted (-2.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (0.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (2.00cm,-2.00cm);
-draw fullcircle scaled 0.02cm shifted (4.00cm,-2.00cm);]])
+draw fullcircle scaled 0.02cm shifted (-3.00cm,0.00cm);
+draw fullcircle scaled 0.02cm shifted (0.00cm,0.00cm);
+draw fullcircle scaled 0.02cm shifted (-3.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (-1.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (1.00cm,-2.00cm);
+draw fullcircle scaled 0.02cm shifted (3.00cm,-2.00cm);]])
 
 testa.main({
     figure = testFigure,
