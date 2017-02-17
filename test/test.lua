@@ -8,7 +8,12 @@ testFigure.empty = testa.is(
     function ()
         return luamp.figure()
     end,
-    [[beginfig(0);
+    [[verbatimtex
+%&latex
+\\documentclass{article}
+\\begin{document}
+etex
+beginfig(0);
 endfig;
 end]])
 
@@ -16,7 +21,12 @@ testFigure.circle = testa.is(
     function()
         return luamp.figure(luamp.circle(luamp.point(0,0), 1))
     end,
-    [[beginfig(0);
+    [[verbatimtex
+%&latex
+\\documentclass{article}
+\\begin{document}
+etex
+beginfig(0);
 draw fullcircle scaled 2.00cm shifted (0.00cm,0.00cm);
 endfig;
 end]])
