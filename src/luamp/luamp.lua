@@ -1,6 +1,6 @@
 -- The MIT License (MIT)
 
--- Copyright (c) 2015 TimeExceed
+-- Copyright (c) 2015 TimeExceed, https://github.com/TimeExceed/LuaMetapost
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -156,13 +156,14 @@ end
 
 local function within_line(pt, line)
     local p0, p1 = table.unpack(line)
-    local dp0 = pt - p0
-    local dx0 = dp0.x
-    local dy0 = dp0.y
-    local dp1 = p1 - p0
-    local dx1 = dp1.x
-    local dy1 = dp1.y
-    return dx0 * dx1 >= 0 and dy0 * dy1 >= 0
+    local c = distance(p0, p1)
+    local a = distance(pt, p0)
+    local b = distance(pt, p1)
+    if a == 0 or b == 0 then
+        return true
+    else
+        return (a*a + b*b - c*c) / (2 * a * b) < 0
+    end
 end
 
 local function intersect_lines(line, target)
@@ -816,7 +817,7 @@ local Rectangle = {
         for i = 1, #edges do
             local pt = intersect_lines(edges[i], target)
             if pt and within_line(pt, edges[i]) then
-                return pt
+                return pt + rec.center
             end
         end
     end,
