@@ -927,8 +927,8 @@ function luamp.bullet(center, opts)
     
     local res = {
         center = center,
-        inner_radius = 0.1,
-        border_radius = 0.11,
+        inner_radius = 0.07,
+        border_radius = 0.08,
         brush_color = opts.brush_color,
     }
     return setmetatable(res, Bullet)
