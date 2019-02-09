@@ -140,6 +140,24 @@ will return the following string
 drawarrow (0.00cm,0.00cm)--(1.00cm,0.00cm);
 ```
 
+### polyline(shapes, opts)
+### polyarrow(shapes, opts)
+### polydblarrow(shapes, opts)
+
+All of these three APIs draw a polyline across center of ```shapes```, one by one, with no arrow, single arrow or double arrow respectively.
+
+```opts``` is optional. See colors and line styles for details.
+
+For example, 
+```lua
+luamp.draw(luamp.polyarrow({luamp.origin, luamp.point(1, 0), luamp.point(1, 1)}))
+```
+will return the following string
+```
+draw (0.00cm,0.00cm)--(1.00cm,0.00cm);
+drawarrow (1.00cm,0.00cm)--(1.00cm,1.00cm);
+```
+
 ### rectangle(center, length, height, opts)
 
 Draws a rectangle.

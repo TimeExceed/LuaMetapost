@@ -744,6 +744,40 @@ function luamp.dblarrow(from, to, opts)
     return rawset(res, 'arrow', arrow_styles.double)
 end
 
+function luamp.polyline(shapes, opts)
+   local res = {}
+   for i = 1, #shapes - 1 do
+      table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+   end
+   return res
+end
+
+function luamp.polyarrow(shapes, opts)
+   local res = {}
+   if #shapes <= 1 then
+   else
+      for i = 1, #shapes - 2 do
+         table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+      end
+      table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
+   end
+   return res
+end
+
+function luamp.polydblarrow(shapes, opts)
+   local res = {}
+   if #shapes <= 1 then
+   elseif #shapes == 2 then
+      table.insert(res, luamp.dblarrow(shapes[1], shapes[2], opts))
+   else
+      table.insert(res, luamp.arrow(shapes[2], shapes[1], opts))
+      for i = 2, #shapes - 2 do
+         table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+      end
+      table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
+   end
+   return res
+end
 
 local Rectangle = {
     __index = function()
