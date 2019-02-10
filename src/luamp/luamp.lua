@@ -101,14 +101,17 @@ local Point = {
     __sub = function(p0, p1)
         return luamp.point(p0.x - p1.x, p0.y - p1.y)
     end,
+    __div = function(p, n)
+       return luamp.point(p.x / n, p.y / n)
+    end,
     __eq = function(p0, p1)
         return p0.x == p1.x and p0.y == p1.y
     end,
     __tostring = function(p)
-        return string.format('(Point x=%.2f y=%.2f)', p.x, p.y)
-    end,
-    __draw__ = function(p)
         return string.format('(%.2fcm,%.2fcm)', p.x, p.y)
+    end,
+    __draw__ = function()
+        return nil
     end,
     __center__ = function(p)
         return p
@@ -125,27 +128,27 @@ end
 
 luamp.origin = luamp.point(0, 0)
 
+function luamp.centroid(...)
+    assert(... ~= nil)
+    local vargs = table.pack(...)
+    for i = 1, #vargs do
+        assert(getmetatable(vargs[i]) == Point)
+    end
+    local sump = luamp.origin
+    for i = 1, #vargs do
+        sump = sump + vargs[i]
+    end
+    return sump / #vargs
+end
+
+local centroid = luamp.centroid
+
 local function intersect_line(shape, target)
     assert(getmetatable(target) == Point)
     local mt = getmetatable(shape)
     assert(mt)
     assert(mt.__intersect_line__)
     return mt.__intersect_line__(shape, target)
-end
-
-local function centroid(...)
-    assert(... ~= nil)
-    local vargs = table.pack(...)
-    for i = 1, #vargs do
-        assert(getmetatable(vargs[i]) == Point)
-    end
-    local sumx = 0
-    local sumy = 0
-    for i = 1, #vargs do
-        sumx = sumx + vargs[i].x
-        sumy = sumy + vargs[i].y
-    end
-    return luamp.point(sumx / #vargs, sumy / #vargs)
 end
 
 local function distance(p0, p1)
@@ -215,7 +218,10 @@ function luamp.figure(...)
                      'etex',
                      'beginfig(0);'}
         for i = 1, #vargs do
-            table.insert(res, luamp.draw(vargs[i]))
+           l = luamp.draw(vargs[i])
+           if l then 
+              table.insert(res, l)
+           end
         end
         table.insert(res, 'endfig;')
         table.insert(res, 'end')
@@ -388,26 +394,26 @@ local Circle = {
         return string.format('(Circle center=%s radius=%.2f)', tostring(c.center), c.radius)
     end,
     __draw__ = function(c)
-        local res = {}
-        local shape = ' fullcircle scaled %.2fcm shifted %s'
+       local res = {}
+       local shape = ' fullcircle scaled %.2fcm shifted %s'
         
-        local brush = luamp.draw(c.brush_color)
-        if brush then
-            local format = 'fill' .. shape .. brush .. ';'
-            table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
-        end
-        
-        local pen = luamp.draw(c.pen_color)
-        if pen then
-            local format = 'draw' .. shape .. pen .. ';'
-            table.insert(res, string.format(format, 2 * c.radius, luamp.draw(c.center)))
-        end
-
-        if #res == 0 then
-            return nil
-        else
-            return table.concat(res, '\n')
-        end
+       local brush = luamp.draw(c.brush_color)
+       if brush then
+          local format = 'fill' .. shape .. brush .. ';'
+          table.insert(res, string.format(format, 2 * c.radius, c.center))
+       end
+       
+       local pen = luamp.draw(c.pen_color)
+       if pen then
+          local format = 'draw' .. shape .. pen .. ';'
+          table.insert(res, string.format(format, 2 * c.radius, c.center))
+       end
+       
+       if #res == 0 then
+          return nil
+       else
+          return table.concat(res, '\n')
+       end
     end,
     __intersect_line__ = function(circle, target)
         local c = circle.center
@@ -597,9 +603,7 @@ local Text = {
         end
         local command = luamp.draw(t.direction)
         local format = command .. '(btex %s etex, %s)' .. pen_color .. ';'
-        return string.format(
-            format,
-            t.text, luamp.draw(t.center))
+        return string.format(format, t.text, t.center)
     end,
 }
 
@@ -697,10 +701,7 @@ local Line = {
         local line_style = luamp.draw(l.line_style)
         local command = luamp.draw(l.arrow)
         local format = command .. ' %s--%s' .. line_style .. pen_color .. ';'
-        return string.format(
-            format,
-            luamp.draw(l.from),
-            luamp.draw(l.to))
+        return string.format(format, l.from, l.to)
     end,
     __center__ = function(l)
         return centroid(l.from, l.to)
@@ -745,38 +746,38 @@ function luamp.dblarrow(from, to, opts)
 end
 
 function luamp.polyline(shapes, opts)
-   local res = {}
-   for i = 1, #shapes - 1 do
-      table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
-   end
-   return res
+    local res = {}
+    for i = 1, #shapes - 1 do
+        table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+    end
+    return res
 end
 
 function luamp.polyarrow(shapes, opts)
-   local res = {}
-   if #shapes <= 1 then
-   else
-      for i = 1, #shapes - 2 do
-         table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
-      end
-      table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
-   end
-   return res
+    local res = {}
+    if #shapes <= 1 then
+    else
+        for i = 1, #shapes - 2 do
+            table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+        end
+        table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
+    end
+    return res
 end
 
 function luamp.polydblarrow(shapes, opts)
-   local res = {}
-   if #shapes <= 1 then
-   elseif #shapes == 2 then
-      table.insert(res, luamp.dblarrow(shapes[1], shapes[2], opts))
-   else
-      table.insert(res, luamp.arrow(shapes[2], shapes[1], opts))
-      for i = 2, #shapes - 2 do
-         table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
-      end
-      table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
-   end
-   return res
+    local res = {}
+    if #shapes <= 1 then
+    elseif #shapes == 2 then
+        table.insert(res, luamp.dblarrow(shapes[1], shapes[2], opts))
+    else
+        table.insert(res, luamp.arrow(shapes[2], shapes[1], opts))
+        for i = 2, #shapes - 2 do
+            table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+        end
+        table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
+    end
+    return res
 end
 
 local Rectangle = {
@@ -804,7 +805,7 @@ local Rectangle = {
                 res,
                 string.format(
                     format,
-                    table.unpack(map(luamp.draw, luamp.vertices(r)))))
+                    table.unpack(luamp.vertices(r))))
         end
         
         local pen = luamp.draw(r.pen_color)
@@ -814,7 +815,7 @@ local Rectangle = {
                 res,
                 string.format(
                     format,
-                    table.unpack(map(luamp.draw, luamp.vertices(r)))))
+                    table.unpack(luamp.vertices(r))))
         end
 
         if #res == 0 then
@@ -955,9 +956,7 @@ local Matrix = {
         for i = 1, #m.shapes do
             for j = 1, #(m.shapes[i]) do
                 local s = m.shapes[i][j]
-                if s then
-                    table.insert(instructions, luamp.draw(s))
-                end
+                table.insert(instructions, luamp.draw(s))
             end
         end
         return table.concat(instructions, '\n')
@@ -995,12 +994,12 @@ function luamp.layouts.matrix(center, rowSep, colSep, shapes)
         table.insert(realShapes, cols)
         for j = 1, nCol do
             local s = shapes[i][j]
+            local c = luamp.point(colSep * (j - 1), rowSep * (nRow - i)) + offset
             if s then
-                local c = luamp.point(colSep * (j - 1), rowSep * (nRow - i)) + offset
                 local x = s(c)
                 table.insert(cols, x)
             else
-                table.insert(cols, false) -- cannot insert nil
+                table.insert(cols, c)
             end
         end
     end
@@ -1020,16 +1019,13 @@ local Tree = {
         error('cannot be modified')
     end,
     __tostring = function(t)
-        return string.format(
-            '(Tree)')
+        return '(Tree)'
     end,
     __draw__ = function(t)
         local instructions = {}
         local function recurDraw(t)
             assert(#t > 0)
-            if t[1] then
-               table.insert(instructions, luamp.draw(t[1]))
-            end
+            table.insert(instructions, luamp.draw(t[1]))
             for i = 2, #t do
                 recurDraw(t[i])
             end
@@ -1051,27 +1047,27 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
     assert(#shapes > 0)
 
     local function downwards(tree, incx)
-	assert(#tree > 0)
-	tree[1].x = tree[1].x + incx
-	for i = 2, #tree do
-	    downwards(tree, incx)
-	end
+        assert(#tree > 0)
+        tree[1].x = tree[1].x + incx
+        for i = 2, #tree do
+            downwards(tree, incx)
+        end
     end
 
     local lastX = {}
-    
+   
     local function upwards(tree, level)
         assert(#tree > 0)
-
-	if #lastX < level then
-	    table.insert(lastX, -colSep)
-	end
-
+      
+        if #lastX < level then
+            table.insert(lastX, -colSep)
+        end
+      
         local minx, maxx
-	local subtrees = {}
+        local subtrees = {}
         for i = 2, #tree do
             local subtree = upwards(tree[i], level + 1)
-	    table.insert(subtrees, subtree)
+            table.insert(subtrees, subtree)
             if i == 2 then
                 minx = subtree[1].x
             end
@@ -1086,38 +1082,38 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
 
         local x
         if #subtrees == 0 then
-	    x = 0
-	else
-	    x = (minx + maxx) / 2
-	end
+            x = 0
+        else
+            x = (minx + maxx) / 2
+        end
         
-	local xx = max(x, lastX[level] + colSep)
-	local incx = xx - x
-	x = xx
-	lastX[level] = x
+        local xx = max(x, lastX[level] + colSep)
+        local incx = xx - x
+        x = xx
+        lastX[level] = x
 
-	if #subtrees > 0 then
-	    local sep = (maxx - minx) / (#subtrees - 1)
-	    for i = 1, #subtrees do
-		local realIncX = incx + minx + sep * (i - 1) - subtrees[i][1].x
-		if realIncX > 0 then
-		    downwards(subtrees[i], realIncX)
-		end
-	    end
-	end
+        if #subtrees > 0 then
+            local sep = (maxx - minx) / (#subtrees - 1)
+            for i = 1, #subtrees do
+                local realIncX = incx + minx + sep * (i - 1) - subtrees[i][1].x
+                if realIncX > 0 then
+                    downwards(subtrees[i], realIncX)
+                end
+            end
+        end
 
-	local res = {}
-	table.insert(res, luamp.point(x, -rowSep * (level - 1)))
-	for i = 1, #subtrees do
-	    table.insert(res, subtrees[i])
-	end
-	return res
+        local res = {}
+        table.insert(res, luamp.point(x, -rowSep * (level - 1)))
+        for i = 1, #subtrees do
+            table.insert(res, subtrees[i])
+        end
+        return res
     end
     local function arrange(shapes)
         return upwards(shapes, 1)
     end
     local positions = arrange(shapes)
-
+   
     local function computeBottomRight(tree)
         assert(#tree > 0)
         local maxx = tree[1].x
@@ -1138,12 +1134,13 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
     local function makeShapes(shapes, positions)
         assert(#shapes > 0, tostring(#shapes))
         assert(#shapes == #positions,
-            string.format('#shapes=%d #positions=%d', #shapes, #positions))
+               string.format('#shapes=%d #positions=%d', #shapes, #positions))
         local tree = {}
+        local c = positions[1] + offset
         if shapes[1] then
-            table.insert(tree, (shapes[1])(positions[1] + offset))
+            table.insert(tree, (shapes[1])(c))
         else
-            table.insert(tree, false)
+            table.insert(tree, c)
         end
         for i = 2, #shapes do
             local subtree = makeShapes(shapes[i], positions[i])

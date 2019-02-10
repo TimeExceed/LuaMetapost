@@ -8,12 +8,7 @@ testFigure.empty = testa.is(
     function ()
         return luamp.figure()
     end,
-    [[verbatimtex
-%&latex
-\\documentclass{article}
-\\begin{document}
-etex
-beginfig(0);
+    [[beginfig(0);
 endfig;
 end]])
 
@@ -23,8 +18,8 @@ testFigure.circle = testa.is(
     end,
     [[verbatimtex
 %&latex
-\\documentclass{article}
-\\begin{document}
+\documentclass{article}
+\begin{document}
 etex
 beginfig(0);
 draw fullcircle scaled 2.00cm shifted (0.00cm,0.00cm);
@@ -200,7 +195,7 @@ testLine.horizontal_center = testa.is(
             luamp.point(0, 0),
             luamp.point(1, 0))))
     end,
-    '(Point x=0.50 y=0.00)')
+    '(0.50cm,0.00cm)')
 
 local function showList(list)
     local res = {}
@@ -216,7 +211,7 @@ testLine.horizontal_vertices = testa.is(
             luamp.point(0, 0),
             luamp.point(1, 0))))
     end,
-    '(Point x=0.00 y=0.00), (Point x=1.00 y=0.00)')
+    '(0.00cm,0.00cm), (1.00cm,0.00cm)')
 
 testLine.slope_center = testa.is(
     function()
@@ -224,7 +219,7 @@ testLine.slope_center = testa.is(
             luamp.point(0, 0),
             luamp.point(1, 1))))
     end,
-    '(Point x=0.50 y=0.50)')
+    '(0.50cm,0.50cm)')
 
 testLine.dashed_line = testa.is(
     function()
@@ -250,7 +245,7 @@ testLine.horizontal_from_circle = testa.is(
             luamp.circle(luamp.point(0, 0), 1),
             luamp.point(2, 0))))
     end,
-    '(Point x=1.00 y=0.00), (Point x=2.00 y=0.00)')
+    '(1.00cm,0.00cm), (2.00cm,0.00cm)')
 
 testLine.vertical_from_circle = testa.is(
     function()
@@ -258,7 +253,7 @@ testLine.vertical_from_circle = testa.is(
             luamp.circle(luamp.point(0, 0), 1),
             luamp.point(0, 2))))
     end,
-    '(Point x=0.00 y=1.00), (Point x=0.00 y=2.00)')
+    '(0.00cm,1.00cm), (0.00cm,2.00cm)')
 
 testLine.slope_from_circle = testa.is(
     function()
@@ -266,7 +261,7 @@ testLine.slope_from_circle = testa.is(
             luamp.circle(luamp.point(0, 0), 5),
             luamp.point(6, 8))))
     end,
-    '(Point x=3.00 y=4.00), (Point x=6.00 y=8.00)')
+    '(3.00cm,4.00cm), (6.00cm,8.00cm)')
 
 testLine.horizontal_to_circle = testa.is(
     function()
@@ -274,7 +269,7 @@ testLine.horizontal_to_circle = testa.is(
             luamp.point(2, 0),
             luamp.circle(luamp.point(0, 0), 1))))
     end,
-    '(Point x=2.00 y=0.00), (Point x=1.00 y=0.00)')
+    '(2.00cm,0.00cm), (1.00cm,0.00cm)')
 
 testLine.vertical_to_circle = testa.is(
     function()
@@ -282,7 +277,7 @@ testLine.vertical_to_circle = testa.is(
             luamp.point(0, 2),
             luamp.circle(luamp.point(0, 0), 1))))
     end,
-    '(Point x=0.00 y=2.00), (Point x=0.00 y=1.00)')
+    '(0.00cm,2.00cm), (0.00cm,1.00cm)')
 
 testLine.slope_to_circle = testa.is(
     function()
@@ -290,7 +285,7 @@ testLine.slope_to_circle = testa.is(
             luamp.point(6, 8),
             luamp.circle(luamp.point(0, 0), 5))))
     end,
-    '(Point x=6.00 y=8.00), (Point x=3.00 y=4.00)')
+    '(6.00cm,8.00cm), (3.00cm,4.00cm)')
 
 testLine.from_rectangle_right = testa.is(
     function()
@@ -299,7 +294,7 @@ testLine.from_rectangle_right = testa.is(
             luamp.point(2, 0))
         return tostring(l.from)
     end,
-    '(Point x=1.00 y=0.00)')
+    '(1.00cm,0.00cm)')
 
 testLine.from_rectangle_bottom = testa.is(
     function()
@@ -308,7 +303,7 @@ testLine.from_rectangle_bottom = testa.is(
             luamp.point(0, -2))
         return tostring(l.from)
     end,
-    '(Point x=0.00 y=-1.00)')
+    '(0.00cm,-1.00cm)')
 
 testLine.from_rectangle_left = testa.is(
     function()
@@ -317,7 +312,7 @@ testLine.from_rectangle_left = testa.is(
             luamp.point(-2, 0))
         return tostring(l.from)
     end,
-    '(Point x=-1.00 y=0.00)')
+    '(-1.00cm,0.00cm)')
 
 testLine.from_rectangle_top = testa.is(
     function()
@@ -326,7 +321,7 @@ testLine.from_rectangle_top = testa.is(
             luamp.point(0, 2))
         return tostring(l.from)
     end,
-    '(Point x=0.00 y=1.00)')
+    '(0.00cm,1.00cm)')
 
 testLine.from_rectangle_top_right = testa.is(
     function()
@@ -335,7 +330,7 @@ testLine.from_rectangle_top_right = testa.is(
             luamp.point(2, 2))
         return tostring(l.from)
     end,
-    '(Point x=1.00 y=1.00)')
+    '(1.00cm,1.00cm)')
 
 testLine.from_rectangle_bottom_right = testa.is(
     function()
@@ -344,7 +339,7 @@ testLine.from_rectangle_bottom_right = testa.is(
             luamp.point(2, -2))
         return tostring(l.from)
     end,
-    '(Point x=1.00 y=-1.00)')
+    '(1.00cm,-1.00cm)')
 
 testLine.from_rectangle_bottom_left = testa.is(
     function()
@@ -353,7 +348,7 @@ testLine.from_rectangle_bottom_left = testa.is(
             luamp.point(-2, -2))
         return tostring(l.from)
     end,
-    '(Point x=-1.00 y=-1.00)')
+    '(-1.00cm,-1.00cm)')
 
 testLine.from_rectangle_top_left = testa.is(
     function()
@@ -362,7 +357,7 @@ testLine.from_rectangle_top_left = testa.is(
             luamp.point(-2, 2))
         return tostring(l.from)
     end,
-    '(Point x=-1.00 y=1.00)')
+    '(-1.00cm,1.00cm)')
 
 testLine.invisible = testa.is(
     function()
@@ -408,7 +403,7 @@ testRectangle.center = testa.is(
             luamp.point(1, 2),
             4, 8)))
     end,
-    '(Point x=1.00 y=2.00)')
+    '(1.00cm,2.00cm)')
 
 testRectangle.length = testa.is(
     function()
@@ -432,7 +427,7 @@ testRectangle.vertices = testa.is(
             luamp.point(1, 2),
             4, 8)))
     end,
-    '(Point x=-1.00 y=6.00), (Point x=3.00 y=6.00), (Point x=3.00 y=-2.00), (Point x=-1.00 y=-2.00)')
+    '(-1.00cm,6.00cm), (3.00cm,6.00cm), (3.00cm,-2.00cm), (-1.00cm,-2.00cm)')
 
 testRectangle.draw = testa.is(
     function()
@@ -521,8 +516,8 @@ testBullet.draw = testa.is(
 	}
 	return table.concat(res, '\n')
     end,
-    [[fill fullcircle scaled 0.20cm shifted (0.00cm,0.00cm);
-drawarrow (1.00cm,0.00cm)--(0.11cm,0.00cm);]])
+    [[fill fullcircle scaled 0.14cm shifted (0.00cm,0.00cm);
+drawarrow (1.00cm,0.00cm)--(0.08cm,0.00cm);]])
 
 testLayouts = {}
 

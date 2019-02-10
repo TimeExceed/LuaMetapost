@@ -57,6 +57,36 @@ end
 which looks like
 ![tree](tree.png)
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [LuaMetaPost](#luametapost)
+    - [General APIs](#general-apis)
+        - [figure(...)](#figure)
+        - [point(x, y)](#pointx-y)
+        - [origin](#origin)
+        - [center(shape)](#centershape)
+        - [vertices(shape)](#verticesshape)
+        - [centroid(points)](#centroidpoints)
+    - [Shapes](#shapes)
+        - [circle(center, radius, opts)](#circlecenter-radius-opts)
+        - [text(center, direction, text, opts)](#textcenter-direction-text-opts)
+        - [line(from, to, opts)](#linefrom-to-opts)
+        - [arrow(from, to, opts)](#arrowfrom-to-opts)
+        - [dblarrow(from, to, opts)](#dblarrowfrom-to-opts)
+        - [polyline(shapes, opts)](#polylineshapes-opts)
+        - [polyarrow(shapes, opts)](#polyarrowshapes-opts)
+        - [polydblarrow(shapes, opts)](#polydblarrowshapes-opts)
+        - [rectangle(center, length, height, opts)](#rectanglecenter-length-height-opts)
+        - [bullet(center, opts)](#bulletcenter-opts)
+    - [Layouts](#layouts)
+        - [layouts.matrix(center, rowSep, colSep, shapes)](#layoutsmatrixcenter-rowsep-colsep-shapes)
+        - [layouts.tree(center, rowSep, colSep, shapes)](#layoutstreecenter-rowsep-colsep-shapes)
+    - [Colors](#colors)
+    - [Line styles](#line-styles)
+
+<!-- markdown-toc end -->
+
 ## General APIs
 
 ### figure(...)
@@ -86,11 +116,15 @@ Returns a point on (x,y).
 
 ### center(shape)
 
-```shape``` returns the center of a shape.
+```center``` returns the center of a shape.
 
 ### vertices(shape)
 
 ```vertices``` returns a list of points of corners, if the shape has corners, such as lines, arrows and rectangles.
+
+### centroid(points)
+
+```centroid``` calculates the geometry centroid of a series of points.
 
 ## Shapes
 
@@ -106,6 +140,7 @@ will return the following string
 ```
 draw fullcircle scaled 2.00cm shifted (0.00cm,0.00cm);
 ```
+
 ### text(center, direction, text, opts)
 
 Shows some text.
@@ -202,7 +237,7 @@ To access nodes of the result matrix, please access ```shapes``` field of the re
 
 ```shapes``` is a matrix. Each element can be either a function or ```false```.
 If it is a function, the function must accept a point and returns a shape or layout whose center is located at this point.
-If it is ```false```, it is just a place holder.
+If it is ```false```, it is just a place holder for points.
 Nothing will be drawn on ```false```s.
 
 For example, 
@@ -233,7 +268,7 @@ To access nodes of the result matrix, please access ```shapes``` field of the re
 ```shapes``` is a tree. 
 Each element can be either a function or ```false```.
 If it is a function, the function must accept a point and returns a shape or layout whose center is located at this point.
-If it is ```false```, it is just a place holder.
+If it is ```false```, it is just a place holder for points.
 Nothing will be drawn on ```false```s.
 A tree is a list, whose first element is the root and the rest are its subtrees.
 

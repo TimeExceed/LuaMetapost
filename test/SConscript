@@ -2,4 +2,4 @@
 Import('env')
 
 env.Default(env.Install('$BUILD_DIR/test/', '#src/luamp/luamp.lua'))
-env.Default(env.Install('$BUILD_DIR/test/', '#external/testa/testa.lua'))
+env.Default(env.Install('$BUILD_DIR/test/', '#test/testa/testa.lua'))
