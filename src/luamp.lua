@@ -939,6 +939,103 @@ function luamp.bullet(center, opts)
     return setmetatable(res, Bullet)
 end
 
+local Triangle = {}
+
+function Triangle.__newindex()
+    error('cannot be modified')
+end
+
+function Triangle.__tostring(this)
+    return string.format(
+        '(Triangle center=%s left=%s top=%s right=%s)',
+        this.center,
+        this.left,
+        this.top,
+        this.right)
+end
+
+function Triangle.__draw__(this)
+    local res = {}
+    local shape = string.format(
+        '%s--%s--%s--cycle',
+        table.unpack(luamp.vertices(this)))
+
+    local pen = luamp.draw(this.pen_color)
+    if pen then
+        table.insert(
+            res,
+            string.format(
+                'draw %s %s %s;',
+                shape,
+                luamp.draw(this.line_style),
+                pen))
+    end
+
+    local brush = luamp.draw(this.brush_color)
+    if brush then
+        table.insert(
+            res,
+            string.format(
+                'fill %s %s;',
+                shape,
+                brush))
+    end
+
+    if #res == 0 then
+        return nil
+    else
+        return table.concat(res, '\n')
+    end
+end
+
+function Triangle.__intersect_line__(this, target)
+    local target = target - luamp.center(this)
+    local vertices = luamp.vertices(this)
+    for i = 1, #vertices do
+        vertices[i] = vertices[i] - luamp.center(this)
+    end
+    local edges = {
+        {vertices[1], vertices[2]},
+        {vertices[2], vertices[3]},
+        {vertices[3], vertices[1]}}
+    for i = 1, #edges do
+        local pt = intersect_lines(edges[i], target)
+        if pt and within_line(pt, edges[i]) then
+            return pt + luamp.center(this)
+        end
+    end
+end
+
+function Triangle.__center__(this)
+    return this.center
+end
+
+function Triangle.__vertices__(this)
+    return {this.left, this.top, this.right}
+end
+
+function Triangle.__index()
+    error('cannot be indexed')
+end
+
+function luamp.triangle(center, width, height, opts)
+    assert(getmetatable(center) == Point)
+    assert(type(width) == 'number')
+    assert(width > 0)
+    assert(type(height) == 'number')
+    assert(height > 0)
+    local opts = fillOptions(opts)
+    local res = {
+        center = center,
+        left = center + luamp.point(-width/2, -height/3),
+        top = center + luamp.point(0, height*2/3),
+        right = center + luamp.point(width/2, -height/3),
+        line_style = opts.line_style,
+        pen_color = opts.pen_color,
+        brush_color = opts.brush_color,
+    }
+    return setmetatable(res, Triangle)
+end
 
 -- layouts
 

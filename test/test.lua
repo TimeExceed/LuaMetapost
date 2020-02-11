@@ -521,6 +521,35 @@ testBullet.draw = testa.is(
     [[fill fullcircle scaled 0.10cm shifted (0.00cm,0.00cm);
 drawarrow (1.00cm,0.00cm)--(0.06cm,0.00cm);]])
 
+local triangle = {}
+
+triangle.draw = testa.is(
+    function()
+        local shape = luamp.triangle(luamp.point(1, 1), 2, 3)
+        return luamp.draw(shape)
+    end,
+    'draw (0.00cm,0.00cm)--(1.00cm,3.00cm)--(2.00cm,0.00cm)--cycle  ;')
+
+triangle.center = testa.is(
+    function()
+        local shape = luamp.triangle(luamp.point(1, 1), 2, 3)
+        return luamp.center(shape)
+    end,
+    luamp.point(1, 1))
+
+triangle.arrows = testa.is(
+    function()
+        local shape = luamp.triangle(luamp.point(1, 1), 2, 3)
+        local pts = {
+            tostring(luamp.intersect_line(shape, luamp.point(2, 1))),
+            tostring(luamp.intersect_line(shape, luamp.point(0, 1))),
+            tostring(luamp.intersect_line(shape, luamp.point(1, -1)))}
+        return table.concat(pts, '\n')
+    end,
+    [[(1.67cm,1.00cm)
+(0.33cm,1.00cm)
+(1.00cm,0.00cm)]])
+
 testLayouts = {}
 
 testLayouts.matrix1_1 = testa.is(
@@ -663,6 +692,7 @@ testa.main({
     arrow = testArrow,
     rectangle = testRectangle,
     bullet = testBullet,
+    triangle = triangle,
 
     layouts = testLayouts,
 })
