@@ -55,14 +55,6 @@ local function sqr(x)
     return x * x
 end
 
-local function map(f, list)
-    local res = {}
-    for i = 1, #list do
-        table.insert(res, f(list[i]))
-    end
-    return res
-end
-
 local function fillOptions(opts)
     assert(opts == nil or type(opts) == 'table')
 
@@ -143,13 +135,15 @@ end
 
 local centroid = luamp.centroid
 
-local function intersect_line(shape, target)
+function luamp.intersect_line(shape, target)
     assert(getmetatable(target) == Point)
     local mt = getmetatable(shape)
     assert(mt)
     assert(mt.__intersect_line__)
     return mt.__intersect_line__(shape, target)
 end
+
+local intersect_line = luamp.intersect_line
 
 local function distance(p0, p1)
     assert(getmetatable(p0) == Point)
@@ -607,6 +601,10 @@ local Text = {
     end,
 }
 
+function Text.__center__(this)
+    return this.center
+end
+
 function luamp.text(center, direction, text, opts)
     assert(getmetatable(center) == Point)
     assert(direction == luamp.directions.center
@@ -712,6 +710,8 @@ local Line = {
 }
 
 local function line_object(from, to, opts)
+    assert(from)
+    assert(to)
     local function line_point(s0, s1)
         if getmetatable(s0) == Point then
             return s0
@@ -727,6 +727,8 @@ local function line_object(from, to, opts)
         line_style = opts.line_style,
         pen_color = opts.pen_color,
     }
+    assert(res.from)
+    assert(res.to)
     return setmetatable(res, Line)
 end
 
