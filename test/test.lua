@@ -518,8 +518,8 @@ testBullet.draw = testa.is(
 	}
 	return table.concat(res, '\n')
     end,
-    [[fill fullcircle scaled 0.14cm shifted (0.00cm,0.00cm);
-drawarrow (1.00cm,0.00cm)--(0.08cm,0.00cm);]])
+    [[fill fullcircle scaled 0.10cm shifted (0.00cm,0.00cm);
+drawarrow (1.00cm,0.00cm)--(0.06cm,0.00cm);]])
 
 testLayouts = {}
 
