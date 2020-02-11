@@ -64,7 +64,7 @@ local function fillOptions(opts)
     else
         newOpts = cloneTable(opts)
     end
-    
+
     if not newOpts.pen_color then
         newOpts.pen_color = luamp.colors.default
     end
@@ -208,12 +208,14 @@ function luamp.figure(...)
         local res = {'verbatimtex',
                      '%&latex',
                      '\\documentclass{article}',
+                     '\\usepackage{amsmath}',
                      '\\begin{document}',
+                     '\\footnotesize',
                      'etex',
                      'beginfig(0);'}
         for i = 1, #vargs do
            l = luamp.draw(vargs[i])
-           if l then 
+           if l then
               table.insert(res, l)
            end
         end
@@ -390,19 +392,19 @@ local Circle = {
     __draw__ = function(c)
        local res = {}
        local shape = ' fullcircle scaled %.2fcm shifted %s'
-        
+
        local brush = luamp.draw(c.brush_color)
        if brush then
           local format = 'fill' .. shape .. brush .. ';'
           table.insert(res, string.format(format, 2 * c.radius, c.center))
        end
-       
+
        local pen = luamp.draw(c.pen_color)
        if pen then
           local format = 'draw' .. shape .. pen .. ';'
           table.insert(res, string.format(format, 2 * c.radius, c.center))
        end
-       
+
        if #res == 0 then
           return nil
        else
@@ -809,7 +811,7 @@ local Rectangle = {
                     format,
                     table.unpack(luamp.vertices(r))))
         end
-        
+
         local pen = luamp.draw(r.pen_color)
         if pen then
             local format = 'draw' .. shape .. pen .. ';'
@@ -923,11 +925,11 @@ function luamp.bullet(center, opts)
     else
         opts = cloneTable(opts)
     end
-    
+
     if not opts.brush_color then
         opts.brush_color = luamp.colors.default
     end
-    
+
     local res = {
         center = center,
         inner_radius = 0.07,
@@ -1057,14 +1059,14 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
     end
 
     local lastX = {}
-   
+
     local function upwards(tree, level)
         assert(#tree > 0)
-      
+
         if #lastX < level then
             table.insert(lastX, -colSep)
         end
-      
+
         local minx, maxx
         local subtrees = {}
         for i = 2, #tree do
@@ -1088,7 +1090,7 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
         else
             x = (minx + maxx) / 2
         end
-        
+
         local xx = max(x, lastX[level] + colSep)
         local incx = xx - x
         x = xx
@@ -1115,7 +1117,7 @@ function luamp.layouts.tree(center, rowSep, colSep, shapes)
         return upwards(shapes, 1)
     end
     local positions = arrange(shapes)
-   
+
     local function computeBottomRight(tree)
         assert(#tree > 0)
         local maxx = tree[1].x

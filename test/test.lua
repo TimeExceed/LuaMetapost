@@ -19,7 +19,9 @@ testFigure.circle = testa.is(
     [[verbatimtex
 %&latex
 \documentclass{article}
+\usepackage{amsmath}
 \begin{document}
+\footnotesize
 etex
 beginfig(0);
 draw fullcircle scaled 2.00cm shifted (0.00cm,0.00cm);
@@ -229,7 +231,7 @@ testLine.dashed_line = testa.is(
             {line_style=luamp.line_styles.dashed}))
     end,
     'draw (0.00cm,0.00cm)--(1.00cm,0.00cm) dashed evenly;')
-    
+
 testLine.dotted_line = testa.is(
     function()
         return luamp.draw(luamp.line(
@@ -546,7 +548,7 @@ draw fullcircle scaled 0.60cm shifted (2.00cm,0.50cm);
 draw fullcircle scaled 0.80cm shifted (-2.00cm,-0.50cm);
 draw fullcircle scaled 1.00cm shifted (0.00cm,-0.50cm);
 draw fullcircle scaled 1.20cm shifted (2.00cm,-0.50cm);]])
- 
+
 testLayouts.matrix2_3_holes = testa.is(
     function()
         return luamp.draw(luamp.layouts.matrix(
