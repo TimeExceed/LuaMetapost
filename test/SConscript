@@ -1,5 +1,7 @@
 # -*- python -*-
 Import('env')
 
-env.Default(env.Install('$BUILD_DIR/test/', '#src/luamp/luamp.lua'))
-env.Default(env.Install('$BUILD_DIR/test/', '#test/testa/testa.lua'))
+deps = ['#src/luamp.lua', '#test/testa/testa.lua']
+
+for x in deps:
+    env.Default(env.Install('$BUILD_DIR/test/', env.File(x)))
