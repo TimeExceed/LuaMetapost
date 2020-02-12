@@ -20,14 +20,16 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-local luamp = {}
 local table = require 'table'
 local string = require 'string'
 local math = require 'math'
+local stream = require 'stream'
+
+local luamp = {}
 
 -- helper functions
 
-local function cloneTable(tbl)
+local function clone_table(tbl)
     local clone = {}
     for k, v in pairs(tbl) do
         clone[k] = v
@@ -43,6 +45,14 @@ local function min(a, b)
     end
 end
 
+function luamp.min(...)
+    assert(... ~= nil)
+    local xs = table.pack(...)
+    return stream.from_list(xs)
+        :accumulate(min)
+        :last()
+end
+
 local function max(a, b)
     if a < b then
         return b
@@ -51,64 +61,86 @@ local function max(a, b)
     end
 end
 
+function luamp.max(...)
+    assert(... ~= nil)
+    local xs = table.pack(...)
+    return stream.from_list(xs)
+        :accumulate(max)
+        :last()
+end
+
 local function sqr(x)
     return x * x
 end
 
-local function fillOptions(opts)
+local function fill_options(opts)
     assert(opts == nil or type(opts) == 'table')
 
-    local newOpts
+    local new_opts
     if not opts then
-        newOpts = {}
+        new_opts = {}
     else
-        newOpts = cloneTable(opts)
+        new_opts = clone_table(opts)
     end
 
-    if not newOpts.pen_color then
-        newOpts.pen_color = luamp.colors.default
+    if not new_opts.pen_color then
+        new_opts.pen_color = luamp.colors.default
     end
-    if not newOpts.brush_color then
-        newOpts.brush_color = luamp.colors.invisible
+    if not new_opts.brush_color then
+        new_opts.brush_color = luamp.colors.invisible
     end
-    if not newOpts.line_style then
-        newOpts.line_style = luamp.line_styles.solid
+    if not new_opts.line_style then
+        new_opts.line_style = luamp.line_styles.solid
     end
 
-    return newOpts
+    return new_opts
+end
+
+local Base = {}
+
+function Base.__index(this, key)
+    local mt = getmetatable(this)
+    assert(mt, string.format('no metatable is found on "%s"', this))
+    local method = rawget(mt, key)
+    assert(method, string.format('method "%s" is required on "%s"', key, this))
+    return method
+end
+
+function Base.__newindex()
+    error('cannot be modified')
+end
+
+function Base.center(this)
+    local vs = this:vertices()
+    return luamp.centroid(table.unpack(vs))
 end
 
 -- geometry
 
-local Point = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __add = function(p0, p1)
-        return luamp.point(p0.x + p1.x, p0.y + p1.y)
-    end,
-    __sub = function(p0, p1)
-        return luamp.point(p0.x - p1.x, p0.y - p1.y)
-    end,
-    __div = function(p, n)
-       return luamp.point(p.x / n, p.y / n)
-    end,
-    __eq = function(p0, p1)
-        return p0.x == p1.x and p0.y == p1.y
-    end,
-    __tostring = function(p)
-        return string.format('(%.2fcm,%.2fcm)', p.x, p.y)
-    end,
-    __draw__ = function()
-        return nil
-    end,
-    __center__ = function(p)
-        return p
-    end,
-}
+local Point = clone_table(Base)
+
+function Point.__add(p0, p1)
+    return luamp.point(p0.x + p1.x, p0.y + p1.y)
+end
+
+function Point.__sub(p0, p1)
+    return luamp.point(p0.x - p1.x, p0.y - p1.y)
+end
+
+function Point.__eq(p0, p1)
+    return p0.x == p1.x and p0.y == p1.y
+end
+
+function Point.__tostring(p)
+    return string.format('(%.2fcm,%.2fcm)', p.x, p.y)
+end
+
+function Point._draw(this, outs)
+end
+
+function Point.center(this)
+    return this
+end
 
 function luamp.point(x, y)
     local res = {
@@ -124,30 +156,22 @@ function luamp.centroid(...)
     assert(... ~= nil)
     local vargs = table.pack(...)
     for i = 1, #vargs do
-        assert(getmetatable(vargs[i]) == Point)
+        assert(getmetatable(vargs[i]) == Point,
+            string.format('Point is required but "%s".', vargs[i]))
     end
-    local sump = luamp.origin
-    for i = 1, #vargs do
-        sump = sump + vargs[i]
-    end
-    return sump / #vargs
+    local sump = stream.from_list(vargs)
+        :accumulate(function(last, x)
+            return last + x
+        end)
+        :last()
+    return luamp.point(sump.x / #vargs, sump.y / #vargs)
 end
-
-local centroid = luamp.centroid
-
-function luamp.intersect_line(shape, target)
-    assert(getmetatable(target) == Point)
-    local mt = getmetatable(shape)
-    assert(mt)
-    assert(mt.__intersect_line__)
-    return mt.__intersect_line__(shape, target)
-end
-
-local intersect_line = luamp.intersect_line
 
 local function distance(p0, p1)
-    assert(getmetatable(p0) == Point)
-    assert(getmetatable(p1) == Point)
+    assert(getmetatable(p0) == Point,
+        string.format('Point is required but "%s"', p0))
+    assert(getmetatable(p1) == Point,
+        string.format('Point is required but "%s"', p1))
     return math.sqrt(sqr(p0.x - p1.x) + sqr(p0.y - p1.y))
 end
 
@@ -197,6 +221,30 @@ local function intersect_lines(line, target)
     end
 end
 
+function Base._intersect_line(this, target)
+    local center = this:center()
+    local vertices = this:vertices()
+    local target = target - center
+    local corners = stream.from_list(vertices)
+        :map(function(x)
+            return x - center
+        end)
+        :collect()
+
+    local edges = stream
+        .zip(
+            stream.from_list(corners),
+            stream.from_list(corners)
+                :chain(stream.from_list(corners))
+                :drop(1))
+        :collect()
+    for i = 1, #edges do
+        local pt = intersect_lines(edges[i], target)
+        if pt and within_line(pt, edges[i]) then
+            return pt + center
+        end
+    end
+end
 
 -- APIs
 
@@ -214,10 +262,7 @@ function luamp.figure(...)
                      'etex',
                      'beginfig(0);'}
         for i = 1, #vargs do
-           l = luamp.draw(vargs[i])
-           if l then
-              table.insert(res, l)
-           end
+            vargs[i]:_draw(res)
         end
         table.insert(res, 'endfig;')
         table.insert(res, 'end')
@@ -225,91 +270,58 @@ function luamp.figure(...)
     end
 end
 
-function luamp.draw(shape)
-    assert(shape)
-    local mt = getmetatable(shape)
-    assert(mt)
-    assert(mt.__draw__)
-    return mt.__draw__(shape)
-end
-
-function luamp.center(shape)
-    local mt = getmetatable(shape)
-    assert(mt)
-    assert(mt.__center__)
-    return mt.__center__(shape)
-end
-
-function luamp.vertices(shape)
-    local mt = getmetatable(shape)
-    assert(mt)
-    assert(mt.__vertices__)
-    return mt.__vertices__(shape)
-end
-
 -- colors
 
 local DefaultColor = {
-    __index = function()
-        error('cannot be indexed')
-    end,
     __newindex = function()
         error('cannot be modified')
     end,
     __tostring = function(c)
         return 'default'
     end,
-    __draw__ = function(c)
+    _draw = function(c)
         return ''
     end,
 }
 
 local Invisible = {
-    __index = function()
-        error('cannot be indexed')
-    end,
     __newindex = function()
         error('cannot be modified')
     end,
     __tostring = function(c)
         return 'invisible'
     end,
-    __draw__ = function(c)
+    _draw = function(c)
         return nil
     end,
 }
 
-local Color = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(c)
-        return string.format(
-            '(Color r=$.2f g=%.2f b=%.2f)',
-            c.red, c.green, c.blue)
-    end,
-    __draw__ = function(c)
-        return string.format(
-            ' withcolor (%.2f,%.2f,%.2f)',
-            c.red, c.green, c.blue)
-    end,
-}
+local Color = clone_table(Base)
+
+function Color.__tostring(c)
+    return string.format(
+        '(Color r=$.2f g=%.2f b=%.2f)',
+        c.m_red, c.m_green, c.m_blue)
+end
+
+function Color._draw(c)
+    return string.format(
+        ' withcolor (%.2f,%.2f,%.2f)',
+        c.m_red, c.m_green, c.m_blue)
+end
 
 function luamp.color(red, green, blue)
     local res = {
-        red = red,
-        green = green,
-        blue = blue,
+        m_red = red,
+        m_green = green,
+        m_blue = blue,
     }
     return setmetatable(res, Color)
 end
 
 luamp.colors = {
-    default = setmetatable({}, DefaultColor),
-    invisible = setmetatable({}, Invisible),
+    default = DefaultColor,
+    invisible = Invisible,
     black = luamp.color(0,0,0),
     white = luamp.color(1,1,1),
     red = luamp.color(1,0,0),
@@ -326,7 +338,9 @@ luamp.colors = {
 
 -- line styles
 
-local Solid = {
+luamp.line_styles = {}
+
+luamp.line_styles.solid = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -336,12 +350,12 @@ local Solid = {
     __tostring = function(s)
         return 'solid'
     end,
-    __draw__ = function(s)
+    _draw = function(s)
         return ''
     end,
 }
 
-local Dashed = {
+luamp.line_styles.dashed = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -351,12 +365,12 @@ local Dashed = {
     __tostring = function(s)
         return 'dashed'
     end,
-    __draw__ = function(s)
+    _draw = function(s)
         return ' dashed evenly'
     end,
 }
 
-local Dotted = {
+luamp.line_styles.dotted = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -366,76 +380,71 @@ local Dotted = {
     __tostring = function(s)
         return 'dotted'
     end,
-    __draw__ = function(s)
+    _draw = function(s)
         return ' dashed withdots'
     end,
 }
 
-luamp.line_styles = {
-    solid = setmetatable({}, Solid),
-    dashed = setmetatable({}, Dashed),
-    dotted = setmetatable({}, Dotted),
-}
-
 -- shapes
 
-local Circle = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(c)
-        return string.format('(Circle center=%s radius=%.2f)', tostring(c.center), c.radius)
-    end,
-    __draw__ = function(c)
-       local res = {}
-       local shape = ' fullcircle scaled %.2fcm shifted %s'
+local Circle = clone_table(Base)
 
-       local brush = luamp.draw(c.brush_color)
-       if brush then
-          local format = 'fill' .. shape .. brush .. ';'
-          table.insert(res, string.format(format, 2 * c.radius, c.center))
-       end
+function Circle.__tostring(c)
+    return string.format('(Circle center=%s radius=%.2f)', c.m_center, c.m_radius)
+end
 
-       local pen = luamp.draw(c.pen_color)
-       if pen then
-          local format = 'draw' .. shape .. pen .. ';'
-          table.insert(res, string.format(format, 2 * c.radius, c.center))
-       end
+function Circle._draw(this, outs)
+    local brush = this.m_opts.brush_color:_draw()
+    if brush then
+        local shape = string.format(
+            'fill fullcircle scaled %.2fcm shifted %s%s;',
+            2 * this.m_radius,
+            this.m_center,
+            brush)
+        table.insert(outs, shape)
+    end
 
-       if #res == 0 then
-          return nil
-       else
-          return table.concat(res, '\n')
-       end
-    end,
-    __intersect_line__ = function(circle, target)
-        local c = circle.center
-        local r = circle.radius
-        local p0 = target - c
-        local l = distance(luamp.origin, p0)
-        local x1 = p0.x * r / l
-        local y1 = p0.y * r / l
-        return c + luamp.point(x1, y1)
-    end,
-}
+    local pen = this.m_opts.pen_color:_draw()
+    if pen then
+        local line_style = this.m_opts.line_style:_draw()
+        local shape = string.format(
+            'draw fullcircle scaled %.2fcm shifted %s%s%s;',
+            2 * this.m_radius,
+            this.m_center,
+            pen,
+            line_style)
+        table.insert(outs, shape)
+    end
+end
+
+function Circle._intersect_line(this, target)
+    local c = this.m_center
+    local r = this.m_radius
+    local p0 = target - c
+    local l = distance(luamp.origin, p0)
+    assert(l > 0, 'target must be a point outside the circle.')
+    local x1 = p0.x * r / l
+    local y1 = p0.y * r / l
+    return c + luamp.point(x1, y1)
+end
 
 function luamp.circle(center, radius, opts)
     assert(getmetatable(center) == Point)
     assert(type(radius) == 'number')
-    local opts = fillOptions(opts)
+    local opts = fill_options(opts)
     local res = {
-        center = center,
-        radius = radius,
-        pen_color = opts.pen_color,
-        brush_color = opts.brush_color,
+        m_center = center,
+        m_radius = radius,
+        m_opts = fill_options(opts),
     }
     return setmetatable(res, Circle)
 end
 
-local Center = {
+-- text
+
+luamp.directions = {}
+
+luamp.directions.center = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -445,12 +454,12 @@ local Center = {
     __tostring = function()
         return 'center'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label'
     end,
 }
 
-local Left = {
+luamp.directions.left = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -460,12 +469,12 @@ local Left = {
     __tostring = function()
         return 'left'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.lft'
     end,
 }
 
-local Right = {
+luamp.directions.right = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -475,12 +484,12 @@ local Right = {
     __tostring = function()
         return 'right'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.rt'
     end,
 }
 
-local Top = {
+luamp.directions.top = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -490,12 +499,12 @@ local Top = {
     __tostring = function()
         return 'top'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.top'
     end,
 }
 
-local Bottom = {
+luamp.directions.bottom = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -505,12 +514,12 @@ local Bottom = {
     __tostring = function()
         return 'bottom'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.bot'
     end,
 }
 
-local TopRight = {
+luamp.directions.top_right = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -520,12 +529,12 @@ local TopRight = {
     __tostring = function()
         return 'top-right'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.urt'
     end,
 }
 
-local TopLeft = {
+luamp.directions.top_left = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -535,12 +544,12 @@ local TopLeft = {
     __tostring = function()
         return 'top-left'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.ulft'
     end,
 }
 
-local BottomLeft = {
+luamp.directions.bottom_left = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -550,12 +559,12 @@ local BottomLeft = {
     __tostring = function()
         return 'bottom-left'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.llft'
     end,
 }
 
-local BottomRight = {
+luamp.directions.bottom_right = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -565,46 +574,30 @@ local BottomRight = {
     __tostring = function()
         return 'bottom-right'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'label.lrt'
     end,
 }
 
-luamp.directions = {
-    center = setmetatable({}, Center),
-    left = setmetatable({}, Left),
-    right = setmetatable({}, Right),
-    top = setmetatable({}, Top),
-    bottom = setmetatable({}, Bottom),
-    top_right = setmetatable({}, TopRight),
-    top_left = setmetatable({}, TopLeft),
-    bottom_left = setmetatable({}, BottomLeft),
-    bottom_right = setmetatable({}, BottomRight),
-}
+local Text = clone_table(Base)
 
-local Text = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(t)
-        return string.format('(Text direction=%s text=%s)', tostring(t.direction), t.text)
-    end,
-    __draw__ = function(t)
-        local pen_color = luamp.draw(t.pen_color)
-        if not pen_color then
-            return nil
-        end
-        local command = luamp.draw(t.direction)
-        local format = command .. '(btex %s etex, %s)' .. pen_color .. ';'
-        return string.format(format, t.text, t.center)
-    end,
-}
+function Text.__tostring(t)
+    return string.format('(Text direction=%s text=%s)', t.m_direction, t.m_text)
+end
 
-function Text.__center__(this)
-    return this.center
+function Text._draw(this, outs)
+    local pen_color = this.m_opts.pen_color:_draw()
+    if not pen_color then
+        return
+    end
+    local command = this.m_direction:_draw()
+    local res = string.format(
+        '%s(btex %s etex, %s)%s;',
+        command,
+        this.m_text,
+        this.m_center,
+        pen_color)
+    table.insert(outs, res)
 end
 
 function luamp.text(center, direction, text, opts)
@@ -619,17 +612,20 @@ function luamp.text(center, direction, text, opts)
         or direction == luamp.directions.bottom_left
         or direction == luamp.directions.bottom_right)
     assert(type(text) == 'string')
-    local opts = fillOptions(opts)
     local res = {
-        center = center,
-        direction = direction,
-        text = text,
-        pen_color = opts.pen_color,
+        m_center = center,
+        m_direction = direction,
+        m_text = text,
+        m_opts = fill_options(opts),
     }
     return setmetatable(res, Text)
 end
 
-local NoArrow = {
+-- line, arrow
+
+local arrow_styles = {}
+
+arrow_styles.none = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -639,12 +635,12 @@ local NoArrow = {
     __tostring = function(s)
         return 'no_arrow'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'draw'
     end,
 }
 
-local SingleArrow = {
+arrow_styles.single = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -654,12 +650,12 @@ local SingleArrow = {
     __tostring = function(s)
         return 'single_arrow'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'drawarrow'
     end,
 }
 
-local DoubleArrow = {
+arrow_styles.double = {
     __index = function()
         error('cannot be indexed')
     end,
@@ -669,47 +665,40 @@ local DoubleArrow = {
     __tostring = function(s)
         return 'double_arrow'
     end,
-    __draw__ = function(_)
+    _draw = function(_)
         return 'drawdblarrow'
     end,
 }
 
-local arrow_styles = {
-    no = setmetatable({}, NoArrow),
-    single = setmetatable({}, SingleArrow),
-    double = setmetatable({}, DoubleArrow),
-}
+local Line = clone_table(Base)
 
-local Line = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(l)
-        return string.format(
-            '(Line from=%s to=%s)',
-            tostring(l.from),
-            tostring(l.to))
-    end,
-    __draw__ = function(l)
-        local pen_color = luamp.draw(l.pen_color)
-        if not pen_color then
-            return nil
-        end
-        local line_style = luamp.draw(l.line_style)
-        local command = luamp.draw(l.arrow)
-        local format = command .. ' %s--%s' .. line_style .. pen_color .. ';'
-        return string.format(format, l.from, l.to)
-    end,
-    __center__ = function(l)
-        return centroid(l.from, l.to)
-    end,
-    __vertices__ = function(l)
-        return {l.from, l.to}
+function Line.__tostring(this)
+    return string.format(
+        '(Line from=%s to=%s)',
+        this.m_from,
+        this.m_to)
+end
+
+function Line._draw(this, outs)
+    local pen_color = this.m_opts.pen_color:_draw()
+    if not pen_color then
+        return
     end
-}
+    local line_style = this.m_opts.line_style:_draw()
+    local command = this.m_arrow:_draw()
+    local res = string.format(
+        '%s %s--%s%s%s;',
+        command,
+        this.m_from,
+        this.m_to,
+        line_style,
+        pen_color)
+    table.insert(outs, res)
+end
+
+function Line.vertices(this)
+    return {this.m_from, this.m_to}
+end
 
 local function line_object(from, to, opts)
     assert(from)
@@ -718,304 +707,204 @@ local function line_object(from, to, opts)
         if getmetatable(s0) == Point then
             return s0
         else
-            return intersect_line(s0, luamp.center(s1))
+            return s0:_intersect_line(s1:center())
         end
     end
 
-    local opts = fillOptions(opts)
     local res = {
-        from = line_point(from, to),
-        to = line_point(to, from),
-        line_style = opts.line_style,
-        pen_color = opts.pen_color,
+        m_from = line_point(from, to),
+        m_to = line_point(to, from),
+        m_opts = fill_options(opts),
     }
-    assert(res.from)
-    assert(res.to)
+    assert(res.m_from)
+    assert(res.m_to)
     return setmetatable(res, Line)
 end
 
 function luamp.line(from, to, opts)
     local res = line_object(from, to, opts)
-    return rawset(res, 'arrow', arrow_styles.no)
+    return rawset(res, 'm_arrow', arrow_styles.none)
 end
 
 function luamp.arrow(from, to, opts)
     local res = line_object(from, to, opts)
-    return rawset(res, 'arrow', arrow_styles.single)
+    return rawset(res, 'm_arrow', arrow_styles.single)
 end
 
 function luamp.dblarrow(from, to, opts)
     local res = line_object(from, to, opts)
-    return rawset(res, 'arrow', arrow_styles.double)
+    return rawset(res, 'm_arrow', arrow_styles.double)
 end
 
-function luamp.polyline(shapes, opts)
-    local res = {}
-    for i = 1, #shapes - 1 do
-        table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
+-- rectangle
+
+local Rectangle = clone_table(Base)
+
+function Rectangle.__tostring(this)
+    local center = luamp.centroid(table.unpack(this.m_vertices))
+    local width = (this.m_vertices[2] - this.m_vertices[1]).x
+    local height = (this.m_vertices[2] - this.m_vertices[3]).y
+    return string.format(
+        '(Rectangle center=%s length=%.2f height=%.2f)',
+        center,
+        width,
+        height)
+end
+
+function Rectangle._draw(this, outs)
+    local shape = string.format(
+        '%s--%s--%s--%s--cycle',
+        table.unpack(this:vertices()))
+
+    local brush = this.m_opts.brush_color:_draw()
+    if brush then
+        local shape = string.format(
+            'fill %s%s;',
+            shape,
+            brush)
+        table.insert(outs, shape)
     end
-    return res
-end
 
-function luamp.polyarrow(shapes, opts)
-    local res = {}
-    if #shapes <= 1 then
-    else
-        for i = 1, #shapes - 2 do
-            table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
-        end
-        table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
+    local pen = this.m_opts.pen_color:_draw()
+    if pen then
+        local line_style = this.m_opts.line_style:_draw()
+        local shape = string.format(
+            'draw %s%s%s;',
+            shape,
+            line_style,
+            pen)
+        table.insert(outs, shape)
     end
-    return res
 end
 
-function luamp.polydblarrow(shapes, opts)
-    local res = {}
-    if #shapes <= 1 then
-    elseif #shapes == 2 then
-        table.insert(res, luamp.dblarrow(shapes[1], shapes[2], opts))
-    else
-        table.insert(res, luamp.arrow(shapes[2], shapes[1], opts))
-        for i = 2, #shapes - 2 do
-            table.insert(res, luamp.line(shapes[i], shapes[i + 1], opts))
-        end
-        table.insert(res, luamp.arrow(shapes[#shapes - 1], shapes[#shapes], opts))
-    end
-    return res
+function Rectangle.vertices(this)
+    return this.m_vertices
 end
 
-local Rectangle = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(r)
-        return string.format(
-            '(Rectangle center=%s length=%.2f height=%.2f)',
-            tostring(r.center),
-            r.half_length * 2,
-            r.half_height * 2)
-    end,
-    __draw__ = function(r)
-        local res = {}
-        local shape = ' %s--%s--%s--%s--cycle' .. luamp.draw(r.line_style)
+function Rectangle.width(this)
+    assert(getmetatable(this) == Rectangle)
+    return (this.m_vertices[2] - this.m_vertices[1]).x
+end
 
-        local brush = luamp.draw(r.brush_color)
-        if brush then
-            local format = 'fill' .. shape .. brush .. ';'
-            table.insert(
-                res,
-                string.format(
-                    format,
-                    table.unpack(luamp.vertices(r))))
-        end
+function Rectangle.height(this)
+    assert(getmetatable(this) == Rectangle)
+    return (this.m_vertices[2] - this.m_vertices[3]).y
+end
 
-        local pen = luamp.draw(r.pen_color)
-        if pen then
-            local format = 'draw' .. shape .. pen .. ';'
-            table.insert(
-                res,
-                string.format(
-                    format,
-                    table.unpack(luamp.vertices(r))))
-        end
-
-        if #res == 0 then
-            return nil
-        else
-            return table.concat(res, '\n')
-        end
-    end,
-    __center__ = function(r)
-        return r.center
-    end,
-    __vertices__ = function(r)
-        return {
-            luamp.point(r.center.x - r.half_length, r.center.y + r.half_height),
-            luamp.point(r.center.x + r.half_length, r.center.y + r.half_height),
-            luamp.point(r.center.x + r.half_length, r.center.y - r.half_height),
-            luamp.point(r.center.x - r.half_length, r.center.y - r.half_height),
-        }
-    end,
-    __intersect_line__ = function(rec, target)
-        local target = target - rec.center
-        local corners = {
-            luamp.point(rec.half_length, rec.half_height),
-            luamp.point(rec.half_length, -rec.half_height),
-            luamp.point(-rec.half_length, -rec.half_height),
-            luamp.point(-rec.half_length, rec.half_height),
-        }
-        local edges = {
-            {corners[1], corners[2]},
-            {corners[2], corners[3]},
-            {corners[3], corners[4]},
-            {corners[4], corners[1]},
-        }
-        for i = 1, #edges do
-            local pt = intersect_lines(edges[i], target)
-            if pt and within_line(pt, edges[i]) then
-                return pt + rec.center
-            end
-        end
-    end,
-}
-
-function luamp.rectangle(center, length, height, opts)
+function luamp.rectangle(center, width, height, opts)
     assert(getmetatable(center) == Point)
-    assert(type(length) == 'number')
-    assert(length > 0)
+    assert(type(width) == 'number')
+    assert(width > 0)
     assert(type(height) == 'number')
     assert(height > 0)
-    local opts = fillOptions(opts)
+
+    local half_width = width / 2
+    local half_height = height / 2
+
+    local corners = {
+        luamp.point(-half_width, half_height),
+        luamp.point(half_width, half_height),
+        luamp.point(half_width, -half_height),
+        luamp.point(-half_width, -half_height),
+    }
+    local vertices = stream.from_list(corners)
+        :map(function(x)
+            return x + center
+        end)
+        :collect()
+
     local res = {
-        center = center,
-        half_length = length / 2,
-        half_height = height / 2,
-        line_style = opts.line_style,
-        pen_color = opts.pen_color,
-        brush_color = opts.brush_color,
+        m_vertices = vertices,
+        m_opts = fill_options(opts),
     }
     return setmetatable(res, Rectangle)
 end
 
-function luamp.length(rec)
-    assert(getmetatable(rec) == Rectangle)
-    return rec.half_length * 2
+-- bullet
+
+local Bullet = clone_table(Base)
+
+function Bullet.__tostring(this)
+    return string.format('(Bullet center=%s)', this.m_center)
 end
 
-function luamp.height(rec)
-    assert(getmetatable(rec) == Rectangle)
-    return rec.half_height * 2
+function Bullet._draw(this, outs)
+    local x = luamp.circle(
+        this:center(),
+        this.m_inner_radius,
+        this.m_opts)
+    x:_draw(outs)
 end
 
-local Bullet = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(c)
-        return string.format('(Bullet center=%s)', tostring(c.center))
-    end,
-    __draw__ = function(c)
-        return luamp.draw(
-            luamp.circle(
-                c.center,
-                c.inner_radius,
-                {pen_color=luamp.colors.invisible,
-                 brush_color=c.brush_color}))
-    end,
-    __intersect_line__ = function(c, target)
-        return intersect_line(luamp.circle(c.center, c.border_radius), target)
-    end,
-    __center__ = function(c)
-        return c.center
-    end,
-}
+function Bullet.center(this)
+    return this.m_center
+end
+
+function Bullet._intersect_line(c, target)
+    return luamp.circle(c:center(), c.m_border_radius)
+        :_intersect_line(target)
+end
+
 
 function luamp.bullet(center, opts)
     assert(getmetatable(center) == Point)
-    assert(opts == nil or type(opts) == 'table')
 
-    if not opts then
-        opts = {}
-    else
-        opts = cloneTable(opts)
+    local filled_opts = fill_options(opts)
+    if not opts or not opts.brush_color then
+        filled_opts.brush_color = luamp.colors.default
     end
-
-    if not opts.brush_color then
-        opts.brush_color = luamp.colors.default
+    if not opts or not opts.pen_color then
+        filled_opts.pen_color = luamp.colors.invisible
     end
 
     local res = {
-        center = center,
-        inner_radius = 0.05,
-        border_radius = 0.06,
-        brush_color = opts.brush_color,
+        m_center = center,
+        m_opts = filled_opts,
+        m_inner_radius = 0.05,
+        m_border_radius = 0.06,
     }
     return setmetatable(res, Bullet)
 end
 
-local Triangle = {}
+-- triangle
 
-function Triangle.__newindex()
-    error('cannot be modified')
-end
+local Triangle = clone_table(Base)
 
 function Triangle.__tostring(this)
     return string.format(
-        '(Triangle center=%s left=%s top=%s right=%s)',
-        this.center,
-        this.left,
-        this.top,
-        this.right)
+        '(Triangle left=%s top=%s right=%s)',
+        this.m_left,
+        this.m_top,
+        this.m_right)
 end
 
-function Triangle.__draw__(this)
-    local res = {}
+function Triangle._draw(this, outs)
     local shape = string.format(
         '%s--%s--%s--cycle',
-        table.unpack(luamp.vertices(this)))
+        table.unpack(this:vertices()))
 
-    local pen = luamp.draw(this.pen_color)
+    local pen = this.m_opts.pen_color:_draw()
     if pen then
-        table.insert(
-            res,
-            string.format(
-                'draw %s %s %s;',
-                shape,
-                luamp.draw(this.line_style),
-                pen))
+        local shape = string.format(
+            'draw %s%s%s;',
+            shape,
+            this.m_opts.line_style:_draw(),
+            pen)
+        table.insert(outs, shape)
     end
 
-    local brush = luamp.draw(this.brush_color)
+    local brush = this.m_opts.brush_color:_draw()
     if brush then
-        table.insert(
-            res,
-            string.format(
-                'fill %s %s;',
-                shape,
-                brush))
-    end
-
-    if #res == 0 then
-        return nil
-    else
-        return table.concat(res, '\n')
+        local shape = string.format(
+            'fill %s%s;',
+            shape,
+            brush)
+        table.insert(outs, shape)
     end
 end
 
-function Triangle.__intersect_line__(this, target)
-    local target = target - luamp.center(this)
-    local vertices = luamp.vertices(this)
-    for i = 1, #vertices do
-        vertices[i] = vertices[i] - luamp.center(this)
-    end
-    local edges = {
-        {vertices[1], vertices[2]},
-        {vertices[2], vertices[3]},
-        {vertices[3], vertices[1]}}
-    for i = 1, #edges do
-        local pt = intersect_lines(edges[i], target)
-        if pt and within_line(pt, edges[i]) then
-            return pt + luamp.center(this)
-        end
-    end
-end
-
-function Triangle.__center__(this)
-    return this.center
-end
-
-function Triangle.__vertices__(this)
-    return {this.left, this.top, this.right}
-end
-
-function Triangle.__index()
-    error('cannot be indexed')
+function Triangle.vertices(this)
+    return {this.m_left, this.m_top, this.m_right}
 end
 
 function luamp.triangle(center, width, height, opts)
@@ -1024,15 +913,11 @@ function luamp.triangle(center, width, height, opts)
     assert(width > 0)
     assert(type(height) == 'number')
     assert(height > 0)
-    local opts = fillOptions(opts)
     local res = {
-        center = center,
-        left = center + luamp.point(-width/2, -height/3),
-        top = center + luamp.point(0, height*2/3),
-        right = center + luamp.point(width/2, -height/3),
-        line_style = opts.line_style,
-        pen_color = opts.pen_color,
-        brush_color = opts.brush_color,
+        m_left = center + luamp.point(-width/2, -height/3),
+        m_top = center + luamp.point(0, height*2/3),
+        m_right = center + luamp.point(width/2, -height/3),
+        m_opts = fill_options(opts),
     }
     return setmetatable(res, Triangle)
 end
@@ -1041,46 +926,19 @@ end
 
 luamp.layouts = {}
 
-local Matrix = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(m)
-        return string.format(
-            '(Matrix)')
-    end,
-    __draw__ = function(m)
-        local instructions = {}
-        for i = 1, #m.shapes do
-            for j = 1, #(m.shapes[i]) do
-                local s = m.shapes[i][j]
-                table.insert(instructions, luamp.draw(s))
-            end
-        end
-        return table.concat(instructions, '\n')
-    end,
-    __center__ = function(m)
-        return m.center
-    end,
-}
-
-function luamp.layouts.matrix(center, rowSep, colSep, shapes)
+function luamp.layouts.matrix(center, row_sep, col_sep, shapes)
     assert(getmetatable(center) == Point)
-    assert(type(rowSep) == 'number')
-    assert(type(colSep) == 'number')
+    assert(type(row_sep) == 'number')
+    assert(type(col_sep) == 'number')
     assert(type(shapes) == 'table')
-    local nRow = #shapes
-    assert(nRow > 0)
-    local nCol = #(shapes[1])
-    for i = 2, nRow do
-        if #(shapes[i]) > nCol then
-            nCol = #(shapes[i])
-        end
-    end
-    for i = 1, nRow do
+    local n_row = #shapes
+    local n_col = stream.from_list(shapes)
+        :map(function(x)
+            return #x
+        end)
+        :accumulate(max)
+        :last()
+    for i = 1, n_row do
         local col = shapes[i]
         for j = 1, #col do
             local s = col[j]
@@ -1088,14 +946,19 @@ function luamp.layouts.matrix(center, rowSep, colSep, shapes)
         end
     end
 
-    local offset = center - luamp.point(colSep * (nCol - 1) / 2, rowSep * (nRow - 1) / 2)
-    local realShapes = {}
-    for i = 1, nRow do
+    local offset = luamp.point(
+        col_sep * (n_col - 1) / 2,
+        row_sep * (n_row - 1) / 2)
+    offset = center - offset
+    local real_shapes = {}
+    for i = 1, n_row do
         local cols = {}
-        table.insert(realShapes, cols)
-        for j = 1, nCol do
+        table.insert(real_shapes, cols)
+        for j = 1, n_col do
             local s = shapes[i][j]
-            local c = luamp.point(colSep * (j - 1), rowSep * (nRow - i)) + offset
+            local c = offset + luamp.point(
+                col_sep * (j - 1),
+                row_sep * (n_row - i))
             if s then
                 local x = s(c)
                 table.insert(cols, x)
@@ -1105,157 +968,155 @@ function luamp.layouts.matrix(center, rowSep, colSep, shapes)
         end
     end
 
-    local res = {
-        center = center,
-        shapes = realShapes,
-    }
-    return setmetatable(res, Matrix)
+    return real_shapes
 end
 
-local Tree = {
-    __index = function()
-        error('cannot be indexed')
-    end,
-    __newindex = function()
-        error('cannot be modified')
-    end,
-    __tostring = function(t)
-        return '(Tree)'
-    end,
-    __draw__ = function(t)
-        local instructions = {}
-        local function recurDraw(t)
-            assert(#t > 0)
-            table.insert(instructions, luamp.draw(t[1]))
-            for i = 2, #t do
-                recurDraw(t[i])
-            end
-        end
-
-        recurDraw(t.shapes)
-        return table.concat(instructions, '\n')
-    end,
-    __center__ = function(m)
-        return m.center
-    end,
-}
-
-function luamp.layouts.tree(center, rowSep, colSep, shapes)
+function luamp.layouts.tree(center, row_sep, col_sep, shapes)
     assert(getmetatable(center) == Point)
-    assert(type(rowSep) == 'number')
-    assert(type(colSep) == 'number')
+    assert(type(row_sep) == 'number')
+    assert(type(col_sep) == 'number')
     assert(type(shapes) == 'table')
     assert(#shapes > 0)
 
-    local function downwards(tree, incx)
+    local function shift(tree, diff)
         assert(#tree > 0)
-        tree[1].x = tree[1].x + incx
+        tree[1] = tree[1] + diff
         for i = 2, #tree do
-            downwards(tree, incx)
+            shift(tree[i], diff)
         end
     end
 
-    local lastX = {}
-
-    local function upwards(tree, level)
-        assert(#tree > 0)
-
-        if #lastX < level then
-            table.insert(lastX, -colSep)
+    local function init_pt_tree(shapes, level)
+        local t = {luamp.point(0, -row_sep * level)}
+        for i = 2, #shapes do
+            local subt = init_pt_tree(shapes[i], level + 1)
+            table.insert(t, subt)
         end
+        return t
+    end
 
-        local minx, maxx
-        local subtrees = {}
-        for i = 2, #tree do
-            local subtree = upwards(tree[i], level + 1)
-            table.insert(subtrees, subtree)
-            if i == 2 then
-                minx = subtree[1].x
-            end
-            if i == #tree then
-                maxx = subtree[1].x
-            end
-        end
-        assert((minx == nil) == (#subtrees == 0),
-            string.format('minx=%s maxx=%s', tostring(minxx), tostring(#subtrees)))
-        assert((maxx == nil) == (#subtrees == 0),
-            string.format('minx=%s maxx=%s', tostring(minxx), tostring(#subtrees)))
+    local pt_tree = init_pt_tree(shapes, 0)
 
-        local x
-        if #subtrees == 0 then
-            x = 0
+    local function count_level(shapes)
+        local subheights = stream.from_list(shapes)
+            :drop(1)
+            :map(count_level)
+            :collect()
+        if #subheights == 0 then
+            return 1
         else
-            x = (minx + maxx) / 2
+            return 1 + luamp.max(table.unpack(subheights))
         end
+    end
 
-        local xx = max(x, lastX[level] + colSep)
-        local incx = xx - x
-        x = xx
-        lastX[level] = x
+    local max_level = count_level(shapes)
+    local levelled_max_x = stream.repeated(-col_sep)
+        :take(max_level)
+        :collect()
 
-        if #subtrees > 0 then
-            local sep = (maxx - minx) / (#subtrees - 1)
-            for i = 1, #subtrees do
-                local realIncX = incx + minx + sep * (i - 1) - subtrees[i][1].x
-                if realIncX > 0 then
-                    downwards(subtrees[i], realIncX)
-                end
+    local function fix_levelled_max_x(t, level)
+        levelled_max_x[level] = max(levelled_max_x[level], t[1].x)
+        for i = 2, #t do
+            fix_levelled_max_x(t[i], level + 1)
+        end
+    end
+
+    local function arrange(t, level)
+        if #t == 1 then
+            local max_x = levelled_max_x[level]
+            local x = max(t[1].x, max_x + col_sep)
+            t[1].x = x
+            fix_levelled_max_x(t, level)
+            return x
+        else
+            local xs = stream.from_list(t)
+                :drop(1)
+                :map(function(x)
+                    return arrange(x, level + 1)
+                end)
+                :inspect()
+                :collect()
+            local min_x = luamp.min(table.unpack(xs))
+            local max_x = luamp.max(table.unpack(xs))
+
+            if #t > 3 then
+                stream
+                    .zip(
+                        stream.range(2, #t + 1),
+                        stream.range(#t, 1, -1))
+                    :take_while(function(x)
+                        return x[1] < x[2]
+                    end)
+                    :map(function(x)
+                        local start = x[1]
+                        local stop = x[2]
+                        local n_sep = stop - start
+                        local sep = (t[stop][1].x - t[start][1].x) / n_sep
+                        for i = start + 1, stop - 1 do
+                            local x = t[start][1].x + sep * (i - start)
+                            if x > t[i][1].x then
+                                local dp = luamp.point(x - t[i][1].x, 0)
+                                shift(t[i], dp)
+                            end
+                        end
+                        return true
+                    end)
+                    :collect()
             end
-        end
 
-        local res = {}
-        table.insert(res, luamp.point(x, -rowSep * (level - 1)))
-        for i = 1, #subtrees do
-            table.insert(res, subtrees[i])
-        end
-        return res
-    end
-    local function arrange(shapes)
-        return upwards(shapes, 1)
-    end
-    local positions = arrange(shapes)
+            local mid_x = (min_x + max_x) / 2
+            t[1].x = mid_x
+            local dx = t[1].x - mid_x
+            if levelled_max_x[level] + col_sep > mid_x then
+                local dp = luamp.point(levelled_max_x[level] + col_sep - mid_x, 0)
+                shift(t, dp)
+            end
 
-    local function computeBottomRight(tree)
-        assert(#tree > 0)
-        local maxx = tree[1].x
-        local miny = tree[1].y
-        for i = 2, #tree do
-            local x, y = computeBottomRight(tree[i])
-            maxx = max(x, maxx)
-            miny = min(y, miny)
+            fix_levelled_max_x(t, level)
+            return t[1].x
         end
-        return maxx, miny
     end
-    local function computeOffset()
-        local x, y = computeBottomRight(positions)
-        return center - luamp.point(x / 2, y / 2)
-    end
-    local offset = computeOffset()
 
-    local function makeShapes(shapes, positions)
+    arrange(pt_tree, 1)
+
+    local function bbox(t)
+        local min_x = t[1].x
+        local min_y = t[1].y
+        local max_x = t[1].x
+        local max_y = t[1].y
+        for i = 2, #t do
+            local min_x_1, min_y_1, max_x_1, max_y_1 = bbox(t[i])
+            min_x = luamp.min(min_x, min_x_1)
+            min_y = luamp.min(min_y, min_y_1)
+            max_x = luamp.max(max_x, max_x_1)
+            max_y = luamp.max(max_y, max_y_1)
+        end
+        return min_x, min_y, max_x, max_y
+    end
+
+    local min_x, min_y, max_x, max_y = bbox(pt_tree)
+    local dp = center - luamp.point((min_x + max_x) / 2, (min_y + max_y) / 2)
+    shift(pt_tree, dp)
+
+    local function make_shapes(shapes, pt_tree)
         assert(#shapes > 0, tostring(#shapes))
-        assert(#shapes == #positions,
-               string.format('#shapes=%d #positions=%d', #shapes, #positions))
+        assert(#shapes == #pt_tree,
+               string.format('#shapes=%d #positions=%d', #shapes, #pt_tree))
         local tree = {}
-        local c = positions[1] + offset
         if shapes[1] then
-            table.insert(tree, (shapes[1])(c))
+            table.insert(tree, (shapes[1])(pt_tree[1]))
         else
-            table.insert(tree, c)
+            table.insert(tree, pt_tree[1])
         end
         for i = 2, #shapes do
-            local subtree = makeShapes(shapes[i], positions[i])
+            local subtree = make_shapes(shapes[i], pt_tree[i])
             table.insert(tree, subtree)
         end
         return tree
     end
-    local realShapes = makeShapes(shapes, positions)
+    local real_shapes = make_shapes(shapes, pt_tree)
 
-    local res = {
-        center = center,
-        shapes = realShapes,
-    }
-    return setmetatable(res, Tree)
+    return real_shapes
 end
 
 return luamp

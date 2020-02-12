@@ -1,0 +1,3 @@
+[submodule "LuaStream"]
+	path = LuaStream
+	url = https://github.com/TimeExceed/LuaStream.git

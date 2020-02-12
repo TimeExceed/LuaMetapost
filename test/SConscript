@@ -1,7 +1,7 @@
 # -*- python -*-
 Import('env')
 
-deps = ['#src/luamp.lua', '#test/testa/testa.lua']
+deps = ['#src/luamp.lua', '#LuaStream/src/stream.lua', '#test/testa/testa.lua']
 
 for x in deps:
     env.Default(env.Install('$BUILD_DIR/test/', env.File(x)))
