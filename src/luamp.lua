@@ -26,6 +26,7 @@ local math = require 'math'
 local stream = require 'stream'
 
 local luamp = {}
+luamp.ext = {}
 
 -- helper functions
 
@@ -36,6 +37,8 @@ local function clone_table(tbl)
     end
     return clone
 end
+
+luamp.ext.clone_table = clone_table
 
 local function min(a, b)
     if a < b then
@@ -97,6 +100,8 @@ local function fill_options(opts)
 end
 
 local Base = {}
+
+luamp.ext.Base = Base
 
 function Base.__index(this, key)
     local mt = getmetatable(this)
@@ -389,8 +394,14 @@ luamp.line_styles.dotted = {
 
 local Circle = clone_table(Base)
 
-function Circle.__tostring(c)
-    return string.format('(Circle center=%s radius=%.2f)', c.m_center, c.m_radius)
+function Circle.__tostring(this)
+    return string.format(
+        '(Circle center=%s radius=%.2f)',
+        this.m_center, this.m_radius)
+end
+
+function Circle.center(this)
+    return this.m_center
 end
 
 function Circle._draw(this, outs)
@@ -583,6 +594,10 @@ local Text = clone_table(Base)
 
 function Text.__tostring(t)
     return string.format('(Text direction=%s text=%s)', t.m_direction, t.m_text)
+end
+
+function Text.center(this)
+    return this.m_center
 end
 
 function Text._draw(this, outs)
