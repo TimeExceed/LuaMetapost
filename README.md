@@ -66,8 +66,6 @@ which looks like
         - [figure(...)](#figure)
         - [point(x, y)](#pointx-y)
         - [origin](#origin)
-        - [center(shape)](#centershape)
-        - [vertices(shape)](#verticesshape)
         - [centroid(points)](#centroidpoints)
     - [Shapes](#shapes)
         - [circle(center, radius, opts)](#circlecenter-radius-opts)
@@ -77,9 +75,12 @@ which looks like
         - [dblarrow(from, to, opts)](#dblarrowfrom-to-opts)
         - [rectangle(center, width, height, opts)](#rectanglecenter-width-height-opts)
         - [bullet(center, opts)](#bulletcenter-opts)
+    - [Shape Methods](#shape-methods)
+        - [shape:center()](#shapecenter)
+        - [shape:vertices()](#shapevertices)
     - [Layouts](#layouts)
-        - [layouts.matrix(center, row_sep, col_sep, shapes)](#layoutsmatrixcenter-rowsep-colsep-shapes)
-        - [layouts.tree(center, row_sep, col_sep, shapes)](#layoutstreecenter-rowsep-colsep-shapes)
+        - [layouts.matrix(center, row_sep, col_sep, shapes)](#layoutsmatrixcenter-row_sep-col_sep-shapes)
+        - [layouts.tree(center, row_sep, col_sep, shapes)](#layoutstreecenter-row_sep-col_sep-shapes)
     - [Colors](#colors)
     - [Line styles](#line-styles)
 
@@ -101,17 +102,19 @@ Returns a point on (x,y).
 
 ```origin``` is the point whose x and y are both 0.
 
-### center(shape)
-
-```center``` returns the center of a shape.
-
-### vertices(shape)
-
-```vertices``` returns a list of points of corners, if the shape has corners, such as lines, arrows and rectangles.
-
 ### centroid(points)
 
 ```centroid``` calculates the geometry centroid of a series of points.
+
+## Shape Methods
+
+### shape:center()
+
+```center``` returns the center of a shape.
+
+### shape:vertices()
+
+```vertices``` returns a list of points of corners, if the shape has corners, such as lines, arrows and rectangles.
 
 ## Shapes
 
