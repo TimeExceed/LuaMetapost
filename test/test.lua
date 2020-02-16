@@ -822,6 +822,53 @@ fill fullcircle scaled 0.10cm shifted (-1.00cm,0.00cm);
 fill fullcircle scaled 0.10cm shifted (1.00cm,0.00cm);
 fill fullcircle scaled 0.10cm shifted (1.00cm,-2.00cm);]])
 
+local polygon = {}
+
+polygon.draw = testa.is(
+    function()
+        local shape = luamp.polygon({luamp.origin, luamp.point(1, 0), luamp.point(0, 1)})
+        return draw(shape)
+    end,
+    'draw (0.00cm,0.00cm)--(1.00cm,0.00cm)--(0.00cm,1.00cm)--cycle;')
+polygon.brush = testa.is(
+    function()
+        local shape = luamp.polygon(
+            {luamp.origin, luamp.point(1, 0), luamp.point(0, 1)},
+            {pen_color=luamp.colors.invisible, brush_color=luamp.colors.red})
+        return draw(shape)
+    end,
+    'fill (0.00cm,0.00cm)--(1.00cm,0.00cm)--(0.00cm,1.00cm)--cycle withcolor (1.00,0.00,0.00);')
+polygon.center = testa.is(
+    function()
+        local shape = luamp.polygon({
+            luamp.point(-1, -1),
+            luamp.point(-1, 1),
+            luamp.point(1, 1),
+            luamp.point(1, -1)})
+        return tostring(shape:center())
+    end,
+    '(0.00cm,0.00cm)')
+polygon.arrows = testa.is(
+    function()
+        local shape = luamp.polygon({
+            luamp.origin,
+            luamp.point(2, 0),
+            luamp.point(1, 3)})
+        local pts = {
+            luamp.point(2, 1),
+            luamp.point(0, 1),
+            luamp.point(1, -1)}
+        local pts = stream.from_list(pts)
+            :map(function(x)
+                return tostring(shape:_intersect_line(x))
+            end)
+            :collect()
+        return table.concat(pts, '\n')
+    end,
+    [[(1.67cm,1.00cm)
+(0.33cm,1.00cm)
+(1.00cm,0.00cm)]])
+
 testa.main({
     figure = figure,
 
@@ -836,6 +883,7 @@ testa.main({
     rectangle = rectangle,
     bullet = bullet,
     triangle = triangle,
+    polygon = polygon,
 
     -- layouts
     matrix = matrix,

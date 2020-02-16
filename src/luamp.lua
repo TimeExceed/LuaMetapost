@@ -251,6 +251,35 @@ function Base._intersect_line(this, target)
     end
 end
 
+function Base._draw(this, outs)
+    local shape = stream.from_list(this:vertices())
+        :map(function(x)
+            return string.format('%s--', x)
+        end)
+        :collect()
+    shape = table.concat(shape, '') .. 'cycle'
+
+    local brush = this.m_opts.brush_color:_draw()
+    if brush then
+        local shape = string.format(
+            'fill %s%s;',
+            shape,
+            brush)
+        table.insert(outs, shape)
+    end
+
+    local pen = this.m_opts.pen_color:_draw()
+    if pen then
+        local line_style = this.m_opts.line_style:_draw()
+        local shape = string.format(
+            'draw %s%s%s;',
+            shape,
+            line_style,
+            pen)
+        table.insert(outs, shape)
+    end
+end
+
 -- APIs
 
 function luamp.figure(...)
@@ -766,32 +795,6 @@ function Rectangle.__tostring(this)
         height)
 end
 
-function Rectangle._draw(this, outs)
-    local shape = string.format(
-        '%s--%s--%s--%s--cycle',
-        table.unpack(this:vertices()))
-
-    local brush = this.m_opts.brush_color:_draw()
-    if brush then
-        local shape = string.format(
-            'fill %s%s;',
-            shape,
-            brush)
-        table.insert(outs, shape)
-    end
-
-    local pen = this.m_opts.pen_color:_draw()
-    if pen then
-        local line_style = this.m_opts.line_style:_draw()
-        local shape = string.format(
-            'draw %s%s%s;',
-            shape,
-            line_style,
-            pen)
-        table.insert(outs, shape)
-    end
-end
-
 function Rectangle.vertices(this)
     return this.m_vertices
 end
@@ -893,31 +896,6 @@ function Triangle.__tostring(this)
         this.m_right)
 end
 
-function Triangle._draw(this, outs)
-    local shape = string.format(
-        '%s--%s--%s--cycle',
-        table.unpack(this:vertices()))
-
-    local pen = this.m_opts.pen_color:_draw()
-    if pen then
-        local shape = string.format(
-            'draw %s%s%s;',
-            shape,
-            this.m_opts.line_style:_draw(),
-            pen)
-        table.insert(outs, shape)
-    end
-
-    local brush = this.m_opts.brush_color:_draw()
-    if brush then
-        local shape = string.format(
-            'fill %s%s;',
-            shape,
-            brush)
-        table.insert(outs, shape)
-    end
-end
-
 function Triangle.vertices(this)
     return {this.m_left, this.m_top, this.m_right}
 end
@@ -935,6 +913,34 @@ function luamp.triangle(center, width, height, opts)
         m_opts = fill_options(opts),
     }
     return setmetatable(res, Triangle)
+end
+
+-- polygon
+
+local Polygon = clone_table(Base)
+
+function Polygon.__tostring(this)
+    local xs = stream.from_list(this.m_vertices)
+        :map(function(x)
+            return tostring(x)
+        end)
+        :collect()
+    return string.format('(Polygon vertices={%s})', table.concat(xs, ','))
+end
+
+function Polygon.vertices(this)
+    return this.m_vertices
+end
+
+function luamp.polygon(vertices, opts)
+    assert(vertices ~= nil)
+    assert(type(vertices) == 'table')
+    assert(opts == nil or type(opts) == 'table')
+    local res = {
+        m_vertices = vertices,
+        m_opts = fill_options(opts),
+    }
+    return setmetatable(res, Polygon)
 end
 
 -- layouts
