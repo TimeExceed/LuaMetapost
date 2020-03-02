@@ -36,7 +36,7 @@ local function draw(tree)
 end
 draw(tree)
 
-return luamp.figure(table.unpack(figs))
+print(luamp.figure(table.unpack(figs)))
 ```
 When this program is executed, it will show following metapost codes on stdout.
 ```metapost
